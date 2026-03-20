@@ -12,7 +12,7 @@
 * in progress (package will be published)
 
 ## Build locally:
-* install [utpm](https://github.com/typst-community/utpm)
+* install [utpm 3.0.0](https://github.com/typst-community/utpm) (you have to build it yourself)
 * ```shell
     utpm prj bump x.x.x
     utpm prj link
