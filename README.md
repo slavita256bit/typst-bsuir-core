@@ -22,7 +22,7 @@
 ## Projects with typst-bsuir-core:
 * [ТЭЦ, Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/vetolet/toec-lab1)
 
-## Dependencies (+ thanks):
+## Dependencies (and thanks):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
 * circuits: [zap](https://github.com/l0uisgrange/zap), [documentation](https://zap.grangelouis.ch/#decorations)
 * diagrams + circuits: [cetz](https://github.com/cetz-package/cetz), [documentation](https://cetz-package.github.io/docs/getting-started)
@@ -36,3 +36,5 @@
 * more aalub cource project functions
 * second toec lab
 * for toec, make R_i and other inputs (and values) with const variable and calculate everything inline, without raw numbers in equations
+* add licence file
+* publish package
