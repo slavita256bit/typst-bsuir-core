@@ -52,13 +52,17 @@
   rows: (),
   bold-vlines: (), // Индексы столбцов, ПОСЛЕ которых нужна жирная вертикальная линия (начиная с 1)
   bold-hlines: (), // Индексы строк, ПОСЛЕ которых нужна жирная горизонтальная линия (начиная с 1)
+  header_cols: 1,
   show-numbers: false // Строка с нумерацией столбцов
 ) = {
   let cols = rows.at(0).len()
 
+  let all_cols_count = cols + 1 + int(show-numbers)
+  let all_rows_count = rows.len() + 1 + header_cols
+
   // Генерируем жирные вертикальные и горизонтальные линии
-  let vlines = bold-vlines.map(x => table.vline(x: x, stroke: 1.5pt + black))
-  let hlines = bold-hlines.map(y => table.hline(y: y, stroke: 1.5pt + black))
+  let vlines = bold-vlines.map(x => table.vline(x: calc.rem(x + all_cols_count, all_cols_count), stroke: 1.5pt + black))
+  let hlines = bold-hlines.map(y => table.hline(y: calc.rem(y + all_rows_count, all_rows_count), stroke: 1.5pt + black))
 
   // Генерируем строку 1, 2, 3...
   let num-row = ()
@@ -84,34 +88,18 @@
   ]
 }
 
-
-// КОНВЕРТЕР ДЛЯ КАРТ КАРНО/ВЕЙЧА
-// Превращает плоскую таблицу в 2D матрицу
-#let tt-to-map-grid(
-  encoded-rows,
-  in-cols,         // Массив индексов колонок-входов (например: (0, 1, 2, 3))
-  out-col,         // Индекс колонки-выхода (например: 5)
-  gray-rows: ("00", "01", "11", "10"), // Коды для строк карты
-  gray-cols: ("00", "01", "11", "10"), // Коды для столбцов карты
-  default-val: "x" // Если набор не найден
-) = {
-  let grid-data = ()
-  for r-code in gray-rows {
-    let grid-row = ()
-    for c-code in gray-cols {
-      let target-combo = r-code.clusters() + c-code.clusters()
-      let found-val = default-val
-
-      for row in encoded-rows {
-        let current-combo = in-cols.map(idx => str(row.at(idx)))
-        if current-combo == target-combo {
-          found-val = row.at(out-col)
-          break
-        }
-      }
-      grid-row.push(found-val)
-    }
-    grid-data.push(grid-row)
+// СОРТИРОВКА ТАБЛИЦЫ ИСТИННОСТИ
+// Сортирует массив строк по указанным колонкам
+#let sort-tt(rows, sort-cols: auto) = {
+  // Если колонки не указаны, сортируем по всей строке целиком
+  if sort-cols == auto {
+    return rows.sorted()
   }
-  return grid-data
+
+  // Функция ключа: берет только те колонки, по которым мы хотим сортировать.
+  // В Typst массивы строк сортируются лексикографически (как слова в словаре),
+  // поэтому "001" будет строго перед "010".
+  let key-fn = row => sort-cols.map(idx => str(row.at(idx)))
+
+  return rows.sorted(key: key-fn)
 }
