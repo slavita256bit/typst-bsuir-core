@@ -1,6 +1,6 @@
 [package]
 name = "typst-bsuir-core"
-version = "0.10.1"
+version = "0.10.3"
 entrypoint = "main.typ"
 authors = ["Slavita"]
 license = "Unlicense"
