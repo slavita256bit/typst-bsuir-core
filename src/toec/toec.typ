@@ -4,6 +4,7 @@
 #import "potential-diagram.typ": potential-diagram
 #import "lab1-results-table.typ": lab1-results-table
 #import "figures.typ": lab-figure
+#import "table-helpers.typ": format-cells, rotate-cells
 #import "styling.typ": apply-toec-styling
 
 #import "title-template.typ" as toec-template

@@ -17,6 +17,10 @@
 * ``utpm prj link``
 * now use can use it with ``#import "@local/typst-bsuir-core:x.x.x": *``
 
+## To put this project into LLM:
+I used:
+``folder2text . my-lib.txt --filter ".idea,*.txt"`` ([folder2text](https://github.com/oritromax/folder2text))
+
 ## Projects with typst-bsuir-core:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
@@ -24,7 +28,7 @@
 * АИЛОЦУ
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1) (IN PROGRESS)
 
-## Dependencies (and thanks to):
+## Dependencies (and credits):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
 * circuits: [zap](https://github.com/l0uisgrange/zap), [documentation](https://zap.grangelouis.ch/#decorations)
 * diagrams + circuits: [cetz](https://github.com/cetz-package/cetz), [documentation](https://cetz-package.github.io/docs/getting-started)

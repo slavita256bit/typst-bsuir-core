@@ -44,24 +44,23 @@
     show figure.caption: cap => context {
       // Уменьшаем размер шрифта подписей до 12pt
       set text(size: 12pt)
+      set par(first-line-indent: 0pt)
 
-      // Берем счетчик и делаем цифру курсивом (через emph)
       let num = none
       if cap.numbering != none {
         num = emph(cap.counter.display(cap.numbering))
       }
 
-      // Собираем текст: "Рисунок *1* — Название"
       let content = [#cap.supplement #num#cap.separator#cap.body]
 
-      // Возвращаем правильное выравнивание
-      // По ГОСТу подпись таблицы слева, рисунка - по центру
       if cap.kind == table {
-        align(left)[#content]
+        // Блок на 100% ширины гарантирует выравнивание по краю страницы
+        block(width: 100%, align(left)[#content])
       } else {
-        align(center)[#content]
+        block(width: 100%, align(center)[#content])
       }
     }
+
 
     body
 }
