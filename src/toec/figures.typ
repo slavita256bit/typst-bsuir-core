@@ -1,8 +1,8 @@
 #let lab-figure(
-  caption: none, // По умолчанию caption отсутствует
-  above: -2em,   // По умолчанию отрицательный отступ сверху -2em
-  gap: -1em,
-  body
+  body,
+  caption: none,
+  above: 0em,
+  ..args // собираем остальные аргументы
 ) = {
   let final-caption = if caption != none {
     caption
@@ -11,14 +11,13 @@
     figure.caption(separator: none, [])
   }
 
-  text("")
-
-  align(center, block(
-    above: above,
-    figure(
-      caption: final-caption,
-      gap: gap,
-      body,
-    )
-  ))
+  // Оборачиваем всё в блок или выносим отступ в параметры figure
+  figure(
+    {
+      v(above) // теперь отступ часть "тела" фигуры
+      move(dx: 0cm, body)
+    },
+    caption: caption,
+    ..args
+  )
 }

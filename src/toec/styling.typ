@@ -42,25 +42,23 @@
     }
 
     show figure.caption: cap => context {
-      // Уменьшаем размер шрифта подписей до 12pt
-      set text(size: 12pt)
-      set par(first-line-indent: 0pt)
+//       set text(size: 12pt)
+//       set par(first-line-indent: 0pt)
 
       let num = none
       if cap.numbering != none {
-        num = emph(cap.counter.display(cap.numbering))
+        num = cap.counter.display(cap.numbering)
       }
 
       let content = [#cap.supplement #num#cap.separator#cap.body]
 
       if cap.kind == table {
         // Блок на 100% ширины гарантирует выравнивание по краю страницы
-        block(width: 100%, align(left)[#content])
+        block(align(left)[#content])
       } else {
         block(width: 100%, align(center)[#content])
       }
     }
-
 
     body
 }

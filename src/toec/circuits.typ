@@ -1,41 +1,56 @@
 #import "@preview/zap:0.5.0"
 
-// Helper: Maps physical direction ("top", "left"...) to Zap's local anchors ("north"...)
+// НОВОЕ: Единый конвертер названий в векторы X, Y
+#let phys-to-vec(dir) = {
+    if dir in ("top", "north", "up") { (0, 1) }
+    else if dir in ("bottom", "south", "down") { (0, -1) }
+    else if dir in ("right", "east") { (1, 0) }
+    else if dir in ("left", "west") { (-1, 0) }
+    // ДИАГОНАЛИ
+    else if dir in ("top-right", "right-top", "north-east", "up-right", "right-up") { (0.7071, 0.7071) }
+    else if dir in ("top-left", "left-top", "north-west", "up-left", "left-up") { (-0.7071, 0.7071) }
+    else if dir in ("bottom-right", "right-bottom", "south-east", "down-right", "right-down") { (0.7071, -0.7071) }
+    else if dir in ("bottom-left", "left-bottom", "south-west", "down-left", "left-down") { (-0.7071, -0.7071) }
+    else { (0, 0) } // Неизвестное направление
+}
+
+// Helper: Maps physical direction to Zap's local anchors ("north", "south-west"...)
 #let phys-to-anchor(angle, physical) = {
-    if physical not in ("top", "bottom", "left", "right", "north", "south", "east", "west", "up", "down") {
-        return physical
-    }
+    let vec = phys-to-vec(physical)
+    if vec == (0, 0) { return physical } // fallback для нестандартных якорей
+
+    let (dx, dy) = vec
     let sin-a = calc.sin(angle)
     let cos-a = calc.cos(angle)
-    let (dx, dy) = if physical in ("top", "north", "up") { (0, 1) }
-              else if physical in ("bottom", "south", "down") { (0, -1) }
-              else if physical in ("right", "east") { (1, 0) }
-              else { (-1, 0) }
 
-    // Rotate physical vector backward to find local coordinate match
     let lx = dx * cos-a + dy * sin-a
     let ly = -dx * sin-a + dy * cos-a
 
-    if calc.abs(ly) >= calc.abs(lx) {
-        if ly >= 0 { "north" } else { "south" }
-    } else {
-        if lx >= 0 { "east" } else { "west" }
-    }
+    let threshold = 0.3
+    let is-n = ly > threshold
+    let is-s = ly < -threshold
+    let is-e = lx > threshold
+    let is-w = lx < -threshold
+
+    let res = ""
+    if is-n { res += "north" }
+    if is-s { res += "south" }
+    if res != "" and (is-e or is-w) { res += "-" }
+    if is-e { res += "east" }
+    if is-w { res += "west" }
+
+    if res == "" { "center" } else { res }
 }
 
 // Helper: Determines if physical direction corresponds to local +Y (1) or -Y (-1)
 #let phys-to-y(angle, physical) = {
     if physical == "wire-left" { return 1 }
     if physical == "wire-right" { return -1 }
-    if physical not in ("top", "bottom", "left", "right", "north", "south", "east", "west", "up", "down") { return 1 }
-    let sin-a = calc.sin(angle)
-    let cos-a = calc.cos(angle)
-    let (dx, dy) = if physical in ("top", "north", "up") { (0, 1) }
-              else if physical in ("bottom", "south", "down") { (0, -1) }
-              else if physical in ("right", "east") { (1, 0) }
-              else { (-1, 0) }
 
-    let ly = -dx * sin-a + dy * cos-a
+    let vec = phys-to-vec(physical)
+    let (dx, dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+    let ly = -dx * calc.sin(angle) + dy * calc.cos(angle)
     if ly >= 0 { 1 } else { -1 }
 }
 
@@ -43,15 +58,11 @@
 #let phys-to-x(angle, physical) = {
     if physical == "forward" { return 1 }
     if physical == "backward" { return -1 }
-    if physical not in ("top", "bottom", "left", "right", "north", "south", "east", "west", "up", "down") { return 1 }
-    let sin-a = calc.sin(angle)
-    let cos-a = calc.cos(angle)
-    let (dx, dy) = if physical in ("top", "north", "up") { (0, 1) }
-              else if physical in ("bottom", "south", "down") { (0, -1) }
-              else if physical in ("right", "east") { (1, 0) }
-              else { (-1, 0) }
 
-    let lx = dx * cos-a + dy * sin-a
+    let vec = phys-to-vec(physical)
+    let (dx, dy) = if vec != (0, 0) { vec } else { (1, 0) }
+
+    let lx = dx * calc.cos(angle) + dy * calc.sin(angle)
     if lx >= 0 { 1 } else { -1 }
 }
 
@@ -68,10 +79,7 @@
         }
 
         let named = params.named()
-
-        // 1. ИЗВЛЕКАЕМ label, чтобы zap его не рисовал
         let lbl = named.remove("label", default: none)
-        // ИЗВЛЕКАЕМ направление стрелки ЭДС
         let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
 
         let draw(ctx, position, style) = {
@@ -85,27 +93,101 @@
             let end-x = arrow-dir * arrow-len
             cetz.draw.line((start-x, 0), (end-x, 0), stroke: style.stroke, mark: (end: ">", fill: style.stroke.paint, scale: 1.2))
 
-            // 2. СВОЯ ОТРИСОВКА МЕТКИ
             if lbl != none {
                 let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
                 let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
-                // Позволяет настраивать отступ через distance (по умолчанию 0.9 для источника)
-                let dist = if type(lbl) == dictionary { lbl.at("distance", default: 0.9) } else { 0.9 }
 
-                // Превращаем физическое направление в векторы (X, Y)
-                let (p-dx, p-dy) = if anchor-dir in ("top", "north", "up") { (0, 1) }
-                              else if anchor-dir in ("bottom", "south", "down") { (0, -1) }
-                              else if anchor-dir in ("right", "east") { (1, 0) }
-                              else if anchor-dir in ("left", "west") { (-1, 0) }
-                              else { (0, 1) }
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
 
-                // Переводим глобальный физический вектор в локальные повернутые координаты компонента
                 let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
                 let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
 
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box) // ИЗМЕРЯЕМ ТЕКСТ (width, height)
+
+                // Если пользователь задал distance - используем его. Иначе вычисляем сами!
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    // r (радиус источника) + отступ 0.15 + учет ширины и высоты текста
+                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                }
+
                 cetz.draw.content(
                     (l-dx * dist, l-dy * dist),
-                    box(fill: white, inset: 1pt)[#text-content],
+                    label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("isource", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let jsource-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let r = style.at("radius", default: 0.53)
+            interface((-r, -r), (r, r), io: position.len() < 2)
+
+            cetz.draw.circle((0, 0), radius: r, fill: style.fill, stroke: style.stroke)
+
+            let size = r * 0.35
+            let shift = r * 0.2
+            let global_arrows_shift = 0.1
+
+            let chevron(tip-x) = {
+                cetz.draw.line(
+                    (tip-x - arrow-dir * size, size),
+                    (tip-x, 0),
+                    (tip-x - arrow-dir * size, -size),
+                    stroke: style.stroke
+                )
+            }
+
+            chevron((shift + global_arrows_shift) * arrow-dir)
+            chevron((-shift + global_arrows_shift) * arrow-dir)
+
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box) // ИЗМЕРЯЕМ ТЕКСТ
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    // r (радиус источника) + отступ 0.15 + учет размеров метки
+                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, l-dy * dist),
+                    label-box,
                     anchor: "center",
                 )
             }
@@ -128,10 +210,12 @@
         }
 
         let named = params.named()
-
-        // 1. ИЗВЛЕКАЕМ параметры, чтобы zap на них не ругался
         let lbl = named.remove("label", default: none)
-        let arrow-side = phys-to-y(angle, named.remove("arrow-side", default: "top"))
+
+        // Извлекаем "сырое" название стороны для стрелки (чтобы использовать его как дефолтный anchor для метки тока)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
         let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
         let arrow-label = named.remove("arrow-label", default: none)
         let arrow-offset = named.remove("arrow-offset", default: 0.5)
@@ -157,37 +241,58 @@
                     mark: (end: ">", fill: style.stroke.paint)
                 )
 
-                let label_offset = arrow-side * 0.4
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                // По умолчанию используем ту же сторону, с которой нарисована сама стрелка (raw-arrow-side)
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label {
+                    arrow-label.distance
+                } else {
+                    // Базовый отступ от линии стрелки 0.15 + размеры самой текстовой метки
+                    0.15 + calc.abs(p-dx) * (atw / 2) + calc.abs(p-dy) * (ath / 2)
+                }
+
+                // (0, y) — это геометрический центр нарисованной стрелки
                 cetz.draw.content(
-                    (0, y + label_offset),
-                    box(fill: white, inset: 1pt)[#arrow-label],
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
                     anchor: "center",
                 )
             }
 
-            // МЕТКА РЕЗИСТОРА (R1, R2...)
+            // ОСНОВНАЯ МЕТКА РЕЗИСТОРА (R1, R2...)
             if lbl != none {
                 let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
                 let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
-                // Позволяет настраивать отступ (по умолчанию 0.7 для резистора)
-                let dist = if type(lbl) == dictionary { lbl.at("distance", default: 0.7) } else { 0.7 }
 
-                //лютый костыль todo: более умно считать
-                if calc.abs(calc.cos(angle.rad())) <= 0.01 or calc.abs(calc.sin(angle.rad())) <= 0.01 {dist /= 1.4}
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
 
-                let (p-dx, p-dy) = if anchor-dir in ("top", "north", "up") { (0, 1) }
-                              else if anchor-dir in ("bottom", "south", "down") { (0, -1) }
-                              else if anchor-dir in ("right", "east") { (1, 0) }
-                              else if anchor-dir in ("left", "west") { (-1, 0) }
-                              else { (0, 1) }
+                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
 
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
 
-                let l-dx = p-dx * calc.cos(-angle) / 3 - p-dy * calc.sin(-angle) / 2 // кофициенты - лютый костыль todo: более умно считать
-                let l-dy = p-dx * calc.sin(-angle) * 1.4 + p-dy * calc.cos(-angle) * 1.3
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    let comp-dist = calc.abs(l-dx) * (w / 2) + calc.abs(l-dy) * (h / 2)
+                    comp-dist + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                }
 
                 cetz.draw.content(
                     (l-dx * dist, l-dy * dist),
-                    box(fill: white, inset: 1pt)[#text-content],
+                    label-box,
                     anchor: "center",
                 )
             }
