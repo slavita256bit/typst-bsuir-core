@@ -1,37 +1,69 @@
 #import "mathtype-mimic.typ": mathtype-mimic
 
+// Умное форматирование чисел с нужным количеством знаков
+#let _fmt(val, digits: 2) = {
+  // Если это массив чисел, применяем форматирование ко всем элементам
+  if type(val) == array {
+    return val.map(v => _fmt(v, digits: digits))
+  }
 
-// Безопасное форматирование чисел (заменяет точку на запятую)
-#let _fmt(v) = if type(v) in (float, int) { str(v).replace(".", ",") } else { v }
+  // Безопасное превращение строк (даже с запятыми) в числа
+  let num = val
+  if type(val) == str {
+    let clean = val.replace(",", ".")
+    if clean.match(regex("^-?\d+(\.\d+)?$")) != none {
+      num = float(clean)
+    }
+  }
+
+  // Основная логика округления и добивки нулями
+  if type(num) in (float, int) {
+    let rounded = calc.round(float(num), digits: digits)
+    let str-val = str(rounded).replace(".", ",")
+    let parts = str-val.split(",")
+    let int-part = parts.at(0)
+    let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
+
+    // Добиваем недостающие нули
+    while frac-part.len() < digits {
+      frac-part += "0"
+    }
+
+    if digits > 0 { int-part + "," + sym.wj + frac-part } else { int-part }
+  } else {
+    // Если это Content (например, текст или сложное выражение), оставляем как есть
+    val
+  }
+}
 
 // Расчет параллельного соединения
-#let calc-par(name, r1, r2, v1, v2, res, unit: "кОм", receive: false) = {
+#let calc-par(name, r1, r2, v1, v2, res, unit: "кОм", receive: false, d-args: 2, d-res: 3) = {
+  let f1 = _fmt(v1, digits: d-args)
+  let f2 = _fmt(v2, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
   mathtype-mimic(receive: receive, [
-    $ R_#name = (R_#r1 R_#r2) / (R_#r1 + R_#r2) = (#v1 dot #v2) / (#v1 + #v2) = #res #unit. $
+    $ R_#name = (R_#r1 R_#r2) / (R_#r1 + R_#r2) = (#f1 dot #f2) / (#f1 + #f2) = #fres #unit. $
   ])
 }
 
 // Расчет последовательного соединения
-#let calc-seq(name, rs, vs, res, unit: "кОм", receive: false) = {
+#let calc-seq(name, rs, vs, res, unit: "кОм", receive: false, d-args: 2, d-res: 3) = {
+  let fvs = _fmt(vs, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
   mathtype-mimic(receive: receive, [
-    $ R_#name = #rs.map(r => $R_#r$).join($+$) = #vs.join($+$) = #res #unit. $
+    $ R_#name = #rs.map(r => $R_#r$).join($+$) = #fvs.join($+$) = #fres #unit. $
   ])
 }
 
 // Базовое деление (Закон Ома)
-#let calc-div(left, top-sym, bot-sym, top-val, bot-val, res, unit: "мА", receive: false) = {
+#let calc-div(left, top-sym, bot-sym, top-val, bot-val, res, unit: "мА", receive: false, d-args: 2, d-res: 3) = {
+  let ftop = _fmt(top-val, digits: d-args)
+  let fbot = _fmt(bot-val, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
   mathtype-mimic(receive: receive, [
-    $ #left = #top-sym / #bot-sym = #top-val / #bot-val = #res #unit. $
+    $ #left = #top-sym / #bot-sym = #ftop / #fbot = #fres #unit. $
   ])
 }
-
-// Правило плеч
-#let calc-shoulder(left, i-sym, r-top, r-bot, i-val, top-val, bot-val, res, unit: "мА", receive: false) = {
-  mathtype-mimic(receive: receive, [
-    $ #left = #i-sym #r-top / (#r-bot) = #i-val (#top-val) / (#bot-val) = #res #unit. $
-  ])
-}
-
 
 // Хелпер для расчета проводимости (сумма обратных сопротивлений)
 // Принимает имя узла (напр. "11"), массив индексов сопротивлений ("1", "2") и их значения как числа
@@ -80,5 +112,20 @@
   ])
 }
 
-// EXAMPLE
-#calc-shoulder($I''_1$, $I''_2$, $R_5$, $R_1 + R_5$, [4,31], [1,5], [1,2 + 1,5], [1,20], receive: true)
+
+// Правило плеч
+#let calc-shoulder(left, i-sym, r-top, r-bot, i-val, top-val, bot-val, res, unit: "мА", receive: false, d-args: 2, d-res: 3) = {
+  let fi = _fmt(i-val, digits: d-args)
+  let ftop = _fmt(top-val, digits: d-args)
+  let fbot = _fmt(bot-val, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
+  mathtype-mimic(receive: receive, [
+    $ #left = #i-sym #r-top / (#r-bot) = #fi (#ftop) / (#fbot) = #fres #unit. $
+  ])
+}
+
+// Просто передаем сырые float-числа через точку!
+#calc-par("23456", "5", "2346", 1.5, 3.52, 1.05)
+
+// Если нужно изменить точность для конкретной формулы:
+#calc-par("23456", "5", "2346", 1.5, 3.52, 1.05, d-args: 3, d-res: 4)

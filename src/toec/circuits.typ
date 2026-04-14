@@ -248,7 +248,7 @@
                 let vec = phys-to-vec(arr-anchor-dir)
                 let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
 
-                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
                 let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
 
                 let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
@@ -258,7 +258,7 @@
                     arrow-label.distance
                 } else {
                     // Базовый отступ от линии стрелки 0.15 + размеры самой текстовой метки
-                    0.15 + calc.abs(p-dx) * (atw / 2) + calc.abs(p-dy) * (ath / 2)
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
                 }
 
                 // (0, y) — это геометрический центр нарисованной стрелки
@@ -277,8 +277,8 @@
                 let vec = phys-to-vec(anchor-dir)
                 let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
 
-                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
-                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
 
                 let label-box = box(fill: white, inset: 1pt)[#text-content]
                 let (tw, th) = cetz.util.measure(ctx, label-box)
@@ -286,8 +286,8 @@
                 let dist = if type(lbl) == dictionary and "distance" in lbl {
                     lbl.distance
                 } else {
-                    let comp-dist = calc.abs(l-dx) * (w / 2) + calc.abs(l-dy) * (h / 2)
-                    comp-dist + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                    let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2)
+                    comp-dist + 0.8 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3)
                 }
 
                 cetz.draw.content(
@@ -376,6 +376,104 @@
     }
 }
 
+#let open-branch-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+
+        // Основные настройки метки и стрелки
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "bottom")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.35) // Отступ стрелки от центра
+
+        // Настройки геометрии разрыва
+        let gap = named.remove("gap", default: 1.5) // Размер пустого пространства
+        let node-radius = named.remove("node-radius", default: 0.08)
+        let show-terminals = named.remove("show-terminals", default: false) // Косые черточки (как на рис 2)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.41)
+            let h = style.at("height", default: 0.47)
+            let half-gap = gap / 2
+
+            // Теперь интерфейс — это полноценный прямоугольник, а не линия
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // 1. Рисуем провода до разрыва
+            cetz.draw.line((-w/2, 0), (-half-gap, 0), stroke: style.stroke)
+            cetz.draw.line((half-gap, 0), (w/2, 0), stroke: style.stroke)
+
+            // 2. Рисуем узлы (точки)
+            cetz.draw.circle((-half-gap, 0), radius: node-radius, fill: style.stroke.paint, stroke: none)
+            cetz.draw.circle((half-gap, 0), radius: node-radius, fill: style.stroke.paint, stroke: none)
+
+            // 3. Опционально: Рисуем косые черточки (клеммы, как на 2-м скриншоте)
+            if show-terminals {
+                let t-size = 0.2
+                // Левая клемма (под углом 45 градусов)
+                cetz.draw.line((-half-gap - t-size, -t-size), (-half-gap + t-size, t-size), stroke: style.stroke)
+                // Правая клемма
+                cetz.draw.line((half-gap - t-size, -t-size), (half-gap + t-size, t-size), stroke: style.stroke)
+            }
+
+            // 4. Рисуем стрелку напряжения и подпись
+            if lbl != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = gap * 0.9 // Длина стрелки чуть меньше зазора
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                // Сама стрелка
+                cetz.draw.line(
+                    (start-x, y), (end-x, y),
+                    stroke: style.stroke,
+                    mark: (end: ">", fill: style.stroke.paint)
+                )
+
+                // Логика позиционирования текста (идентична резистору)
+                let arr-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let arr-anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
 // EXAMPLE
 #circuit-better(scale-factor: 80%, {
     import zap: *
@@ -444,4 +542,17 @@
   source-better("E4", "6", "3", position: 15%, arrow-dir: "forward", label: (content: $E_4$, anchor: "bottom"))
 
   ground-better("3", length: 1.2, spacing: 0.2)
+})
+
+#circuit-better(scale-factor: 100%, {
+  import zap: *
+
+  // Пример 1: Обычный разрыв
+  open-branch-better("XX1", (0, 2), (3, 2), label: $U_(x x)$, arrow-side: "bottom", arrow-dir: "forward")
+
+  // Пример 2: Разрыв с клеммами
+  open-branch-better("XX2", (5, 2), (8, 2), label: $U_(x x)$, arrow-side: "bottom", arrow-dir: "forward", show-terminals: true)
+
+  // Пример вертикального разрыва
+  open-branch-better("XX3", (1, -2), (1, 0), label: $U_(x x)$, arrow-side: "right", arrow-dir: "up")
 })

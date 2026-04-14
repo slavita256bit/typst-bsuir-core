@@ -17,7 +17,7 @@
       v(above) // теперь отступ часть "тела" фигуры
       move(dx: 0cm, body)
     },
-    caption: caption,
+    caption: final-caption,
     ..args
   )
 }

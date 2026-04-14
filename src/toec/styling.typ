@@ -30,10 +30,10 @@
     let num-regex = regex("[0-9]+[\.,][0-9]+")
 
     // Применяем авто-форматирование к формулам
-    show math.equation: eq => {
-      show num-regex: format-value
-      eq
-    }
+//     show math.equation: eq => {
+//       show num-regex: format-value
+//       eq
+//     }
 
     // Применяем авто-форматирование к таблицам
     show table.cell: cell => {
@@ -53,7 +53,6 @@
       let content = [#cap.supplement #num#cap.separator#cap.body]
 
       if cap.kind == table {
-        // Блок на 100% ширины гарантирует выравнивание по краю страницы
         block(align(left)[#content])
       } else {
         block(width: 100%, align(center)[#content])

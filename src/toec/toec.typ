@@ -1,4 +1,4 @@
-#import "circuits.typ": resistor-better, source-better, circuit-better, node-better, ground-better, jsource-better
+#import "circuits.typ": resistor-better, source-better, circuit-better, node-better, ground-better, jsource-better, open-branch-better
 #import "mathtype-mimic.typ": mathtype-mimic
 #import "math-helpers.typ": calc-par, calc-seq, calc-div, calc-shoulder, calc-g, calc-branch-i, _fmt
 #import "potential-diagram.typ": potential-diagram
