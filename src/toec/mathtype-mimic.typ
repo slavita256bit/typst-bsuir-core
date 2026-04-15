@@ -78,9 +78,9 @@
       let has-nested-d = repr(it.denom).contains("frac(")
       // Гибкая настройка отступов:
       // Если есть вложенная дробь -> раздвигаем сильно (0.6em)
-      // Если это простая дробь -> раздвигаем чуть-чуть (0.15em)
-      let pad-n = if has-nested-n { 0.6em } else { 0.3em }
-      let pad-d = if has-nested-d { 0.6em } else { 0.3em }
+      // Если это простая дробь -> раздвигаем чуть-чуть (0.3em)
+      let pad-n = if has-nested-n { 0.8em } else { 0.4em }
+      let pad-d = if has-nested-d { 0.8em } else { 0.4em }
 
       // Оборачиваем в display, чтобы размер цифр 2-го яруса был как у 1-го
       let n = math.display(it.num)
