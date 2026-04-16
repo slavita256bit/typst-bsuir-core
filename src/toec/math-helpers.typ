@@ -1,40 +1,6 @@
+#import "complex-math.typ": *
 #import "mathtype-mimic.typ": mathtype-mimic
-
-// Умное форматирование чисел с нужным количеством знаков
-#let _fmt(val, digits: 2) = {
-  // Если это массив чисел, применяем форматирование ко всем элементам
-  if type(val) == array {
-    return val.map(v => _fmt(v, digits: digits))
-  }
-
-  // Безопасное превращение строк (даже с запятыми) в числа
-  let num = val
-  if type(val) == str {
-    let clean = val.replace(",", ".")
-    if clean.match(regex("^-?\d+(\.\d+)?$")) != none {
-      num = float(clean)
-    }
-  }
-
-  // Основная логика округления и добивки нулями
-  if type(num) in (float, int) {
-    let rounded = calc.round(float(num), digits: digits)
-    let str-val = str(rounded).replace(".", ",")
-    let parts = str-val.split(",")
-    let int-part = parts.at(0)
-    let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
-
-    // Добиваем недостающие нули
-    while frac-part.len() < digits {
-      frac-part += "0"
-    }
-
-    if digits > 0 { int-part + "," + sym.wj + frac-part } else { int-part }
-  } else {
-    // Если это Content (например, текст или сложное выражение), оставляем как есть
-    val
-  }
-}
+#import "fmt.typ": *
 
 // Расчет параллельного соединения
 #let calc-par(name, r1, r2, v1, v2, res, unit: "кОм", receive: false, d-args: 2, d-res: 3) = {
@@ -123,6 +89,82 @@
     $ #left = #i-sym #r-top / (#r-bot) = #fi (#ftop) / (#fbot) = #fres #unit. $
   ])
 }
+
+// --- Базовые элементы ---
+#let calc-reactance-L(f, L, symbol: "L", L-unit: "mH") = {
+  let L-val = L * 1e-3
+  let w = 2 * calc.pi * f
+  let XL = w * L-val
+
+  let display = mathtype-mimic[
+    $ X_L = omega #symbol = 2 pi f #symbol = 2 dot calc.pi dot #f dot #L dot 10^(-3) = #_fmt(XL) " Ом". $
+  ]
+  (val: XL, display: display)
+}
+
+#let calc-reactance-C(f, C, symbol: "C", C-unit: "µF") = {
+  let C-val = C * 1e-6
+  let w = 2 * calc.pi * f
+  let XC = 1 / (w * C-val)
+
+  let display = mathtype-mimic[
+    $ X_C = 1 / (omega #symbol) = 1 / (2 pi f #symbol) = 1 / (2 dot calc.pi dot #f dot #C dot 10^(-6)) = #_fmt(XC) " Ом". $
+  ]
+  (val: XC, display: display)
+}
+
+// --- Комбинации элементов ---
+#let calc-series-impedance(components, symbol: "вх") = {
+  let R_total = components.filter(c => c.type == "R").map(c => c.val).sum()
+  let XL_total = components.filter(c => c.type == "XL").map(c => c.val).sum()
+  let XC_total = components.filter(c => c.type == "XC").map(c => c.val).sum()
+  let X_total = XL_total - XC_total
+
+  let Z = rect(R_total, X_total)
+
+  let symbolic-R = components.filter(c => c.type == "R").map(c => c.symbol).join($+$)
+  let symbolic-X = $X_L - X_C$ // Упрощено для примера, можно сделать сложнее
+
+  let display = mathtype-mimic[
+    $ dot(Z)_#symbol = (#symbolic-R) + j(#symbolic-X) = #display-complex(Z).both " Ом." $
+  ]
+  (val: Z, display: display)
+}
+
+// --- Законы цепей ---
+#let calc-ohms-law(U, Z, I-symbol: "I") = {
+  let I = div(U, Z)
+  let I-mA = polar(I.mag * 1000, I.ang) // Сразу в мА для удобства
+
+  let display = mathtype-mimic[
+    $ dot(#I-symbol) = dot(U) / dot(Z) = #display-complex(U).polar / #display-complex(Z).polar = #display-complex(I-mA).polar " мА". $
+  ]
+  (val: I, val-mA: I-mA, display: display)
+}
+
+#let calc-voltage-drop(I, Z, U-symbol: "U") = {
+  let U = mul(I, Z)
+  let display = mathtype-mimic[
+    $ dot(#U-symbol) = dot(I) dot(Z) = #display-complex(I).polar dot #display-complex(Z).polar = #display-complex(U).polar " В". $
+  ]
+  (val: U, display: display)
+}
+
+#let calc-voltage-drop-explicit(I, Z, Z-sym, Z-val, U-symbol: "U") = {
+  let U_res = mul(I, Z)
+  let I-p = to-polar(I)
+  let U-p = to-polar(U_res)
+
+  let display = mathtype-mimic[
+    $ dot(#U-symbol) = dot(I) (#Z-sym) = #display-complex(I-p).polar dot (#Z-val) = #display-complex(U-p).polar " В". $
+  ]
+  return (val: U_res, display: display)
+}
+
+#let add_j(value) = {
+  return [#if value > 0 { $j$ } else { $-j$ } #_fmt(value)]
+}
+
 
 // Просто передаем сырые float-числа через точку!
 #calc-par("23456", "5", "2346", 1.5, 3.52, 1.05)

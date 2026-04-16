@@ -302,7 +302,7 @@
     })
 }
 
-#let ground-better(node-name, length: 1.2, spacing: 0.2, stroke: 1pt) = {
+#let ground-better(node-name, length: 0.8, spacing: 0.2, stroke: 1pt) = {
   import zap: cetz, wire
   cetz.draw.get-ctx(ctx => {
       let (ctx, pos) = cetz.coordinate.resolve(ctx, node-name)
@@ -354,23 +354,339 @@
     ))
 }
 
+#let current-arrow(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let arrow-label = named.remove("arrow-label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.2)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.0)
+
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            // ИСПРАВЛЕНИЕ 1: Даем минимальную высоту интерфейсу, чтобы работали якоря
+            interface((-w/2, -0.1), (w/2, 0.1), io: position.len() < 2)
+            cetz.draw.line((-w/2, 0), (w/2, 0), stroke: safe-stroke)
+
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 0.8
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+        }
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let open-branch-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "bottom")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.35)
+
+        let gap = named.remove("gap", default: 1.5)
+        let node-radius = named.remove("node-radius", default: 0.08)
+        let show-terminals = named.remove("show-terminals", default: false)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+
+            // ИСПРАВЛЕНИЕ 2: Ширина должна быть больше зазора, иначе провода "скрещиваются"
+            let default-w = style.at("width", default: 1.41)
+            let w = calc.max(default-w, gap + 0.4)
+            let h = style.at("height", default: 0.47)
+            let half-gap = gap / 2
+
+            // Безопасное извлечение цвета
+            let stroke-paint = black
+            if type(style.stroke) == dictionary and "paint" in style.stroke {
+                stroke-paint = style.stroke.paint
+            }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            cetz.draw.line((-w/2, 0), (-half-gap, 0), stroke: style.stroke)
+            cetz.draw.line((half-gap, 0), (w/2, 0), stroke: style.stroke)
+
+            cetz.draw.circle((-half-gap, 0), radius: node-radius, fill: stroke-paint, stroke: none)
+            cetz.draw.circle((half-gap, 0), radius: node-radius, fill: stroke-paint, stroke: none)
+
+            if show-terminals {
+                let t-size = 0.2
+                cetz.draw.line((-half-gap - t-size, -t-size), (-half-gap + t-size, t-size), stroke: style.stroke)
+                cetz.draw.line((half-gap - t-size, -t-size), (half-gap + t-size, t-size), stroke: style.stroke)
+            }
+
+            if lbl != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = gap * 0.9
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line(
+                    (start-x, y), (end-x, y),
+                    stroke: style.stroke,
+                    mark: (end: ">", fill: stroke-paint)
+                )
+
+                let arr-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let arr-anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let inductor-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
+        let arrow-label = named.remove("arrow-label", default: none)
+        let arrow-offset = named.remove("arrow-offset", default: 0.8)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.41)
+            let h = style.at("height", default: 0.47)
+
+            // БРОНЕБОЙНАЯ ПРОВЕРКА СТИЛЕЙ
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // ГОСТ КАТУШКА (4 полуокружности)
+            let loops = 4
+            let step = w / loops
+            for i in range(loops) {
+                let cx = -w/2 + step/2 + i * step - 0.17
+                cetz.draw.arc((cx, -0.02), start: 180deg, stop: 0deg, radius: (step/2, h/2), stroke: safe-stroke)
+            }
+
+            // СТРЕЛКА НАПРЯЖЕНИЯ
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 0.8
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.12 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+
+            // ПОДПИСЬ ЭЛЕМЕНТА
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
+                let dist = if type(lbl) == dictionary and "distance" in lbl { lbl.distance } else { let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2); comp-dist + 0.8 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3) }
+
+                cetz.draw.content((l-dx * dist, l-dy * dist), label-box, anchor: "center")
+            }
+        }
+        // Используем базовый стиль "inductor", чтобы zap не падал
+        component("inductor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let capacitor-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
+        let arrow-label = named.remove("arrow-label", default: none)
+        let arrow-offset = named.remove("arrow-offset", default: 0.8)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 0.6)
+            let h = style.at("height", default: 0.8)
+
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // ГОСТ КОНДЕНСАТОР
+            let gap = 0.2
+            cetz.draw.line((-w/2, 0), (-gap/2, 0), stroke: safe-stroke)
+            cetz.draw.line((gap/2, 0), (w/2, 0), stroke: safe-stroke)
+            cetz.draw.line((-gap/2, -h/2), (-gap/2, h/2), stroke: safe-stroke)
+            cetz.draw.line((gap/2, -h/2), (gap/2, h/2), stroke: safe-stroke)
+
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 1.5
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
+                let dist = if type(lbl) == dictionary and "distance" in lbl { lbl.distance } else { let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2); comp-dist + 1.1 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3) }
+                cetz.draw.content((l-dx * dist, l-dy * dist), label-box, anchor: "center")
+            }
+        }
+        // Используем базовый стиль "capacitor", чтобы zap не падал
+        component("capacitor", name, ..pos, draw: draw, ..named)
+    })
+}
+
 #let node-better(name, pos, visible: false, radius: 0.12, fill: black, ..params) = {
     import zap: cetz, node
 
     let named = params.named()
 
-    // 1. Обрабатываем якоря (top, bottom, left, right)
     let lbl = named.at("label", default: none)
     if type(lbl) == dictionary and "anchor" in lbl {
         lbl.anchor = phys-to-anchor(0deg, lbl.anchor)
         named.label = lbl
     }
 
-    // 2. Вызываем стандартный узел zap, но ЖЕСТКО делаем его невидимым
-    node(name, pos, stroke: none, fill: false, radius: 0.0000001, ..named)
+    // ИСПРАВЛЕНИЕ 3: радиус 0.001 вместо 0.0000001 (во избежание floating point precision error)
+    node(name, pos, stroke: none, fill: false, radius: 0.001, ..named)
 
-    // 3. Если узел должен быть видимым — рисуем поверх него свой кружок
-    // с нужным нам радиусом и цветом
     if visible {
         cetz.draw.circle(name, radius: radius, fill: fill, stroke: none)
     }
@@ -556,3 +872,31 @@
   // Пример вертикального разрыва
   open-branch-better("XX3", (1, -2), (1, 0), label: $U_(x x)$, arrow-side: "right", arrow-dir: "up")
 })
+
+#circuit-better(scale-factor: 80%, {
+    import zap: *
+
+    // Опорные узлы
+    node-better("1", (0, 8), label: (content: "1", anchor: "top"), visible: true)
+    node-better("TR", (6, 8), visible: false)
+    node-better("nL", (6, 5.5), visible: false)
+    node-better("2", (6, 3), label: (content: "2", anchor: "left"), visible: true)
+    node-better("3", (6, 0), label: (content: "3", anchor: "bottom"), visible: true)
+    node-better("4", (0, 0), label: (content: "4", anchor: "bottom"), visible: true)
+
+    // Входное напряжение
+    open-branch-better("U_in", "4", "1", label: $dot(U)$, arrow-side: "left", arrow-dir: "up")
+
+    // Верхний провод
+    wire("1", (2, 8))
+    current-arrow("I_arrow", (2, 8), (4, 8), arrow-label: $dot(I)$, arrow-side: "top", arrow-dir: "forward")
+    wire((4, 8), "TR")
+
+    // Правая ветвь: Катушка и Конденсатор
+    inductor-better("L", "TR", "nL", label: (content: $L$, anchor: "west"), arrow-label: $dot(U)_k$, arrow-side: "right", arrow-dir: "forward")
+    resistor-better("rk", "nL", "2", label: (content: $r_k$, anchor: "west"))
+    capacitor-better("C", "2", "3", label: (content: $C$, anchor: "west"), arrow-label: $dot(U)_C$, arrow-side: "right", arrow-dir: "forward")
+
+    // Нижняя ветвь
+    resistor-better("R1", "3", "4", label: (content: $R_1$, anchor: "top"), arrow-label: $dot(U)_1$, arrow-side: "bottom", arrow-dir: "forward")
+  })

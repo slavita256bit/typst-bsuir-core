@@ -1,4 +1,6 @@
-    #let mathtype-mimic(receive: false, digits: 3, body) = {
+#import "fmt.typ": *
+
+#let mathtype-mimic(receive: false, digits: 3, body) = {
   // Set the MathType-equivalent font
   show math.equation: set text(font: "STIX Two Math", size: 14pt)
 
