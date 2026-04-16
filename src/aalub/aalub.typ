@@ -6,5 +6,6 @@
 #import "base-boolean-functions.typ": generate-base-ochs, generate-base-ochu, generate-base-ochus
 #import "formatters.typ": encoding-as-text, get-mcnf, get-mdnf, generate-boolean-function
 #import "utils.typ": draw-map-block
+#import "testing.typ": generate-tt-file-content
 
 #import "title-template.typ" as aalub-course-project-title
