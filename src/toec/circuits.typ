@@ -258,7 +258,7 @@
                     arrow-label.distance
                 } else {
                     // Базовый отступ от линии стрелки 0.15 + размеры самой текстовой метки
-                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 3 + calc.abs(p-dy) * (ath / 2)
                 }
 
                 // (0, y) — это геометрический центр нарисованной стрелки
@@ -278,7 +278,7 @@
                 let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
 
                 let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
-                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
+                let l-dy = p-dx * calc.sin(-angle) * 1.5 + p-dy * calc.cos(-angle) * 1.5
 
                 let label-box = box(fill: white, inset: 1pt)[#text-content]
                 let (tw, th) = cetz.util.measure(ctx, label-box)
@@ -831,34 +831,34 @@
 
 
 #circuit-better(scale-factor: 80%, {
-  import zap: *
+    import zap: *
 
-  node-better("1", (0, -1), label: (content: "1", anchor: "west"), visible: true)
-  node-better("3", (16, -1), label: (content: "3", anchor: "east"), visible: true)
-  node-better("2", (8, 9), label: (content: "2", anchor: "north"), visible: true)
-  node-better("4", (8, 3), label: (content: "4", anchor: "north-west"), visible: true)
+    node-better("1", (0, -1), label: (content: "1", anchor: "west"), visible: true)
+    node-better("3", (16, -1), label: (content: "3", anchor: "east"), visible: true)
+    node-better("2", (8, 9), label: (content: "2", anchor: "north"), visible: true)
+    node-better("4", (8, 3), label: (content: "4", anchor: "north-west"), visible: true)
 
-  node-better("5", (4, 1), visible: false) // скрыл вспомогательные узлы
-  node-better("6", (12, 1), visible: false) // скрыл вспомогательные узлы
+    node-better("5", (4, 1), label: (content: "5", anchor: "north-west"), visible: true)
+    node-better("6", (12, 1), label: (content: "6", anchor: "north-east"), visible: true)
 
-  // Внешний контур
-  resistor-better("R1", "1", "2", label: (content: $R_1$, anchor: "right"), arrow-label: $I_1$, arrow-side: "left", arrow-dir: "forward")
-  resistor-better("R5", "2", "3", label: (content: $R_5$, anchor: "left"), arrow-label: $I_5$, arrow-side: "right", arrow-dir: "forward")
-  resistor-better("R3", "1", "3", label: (content: $R_3$, anchor: "bottom"), arrow-label: $I_3$, arrow-side: "top", arrow-dir: "forward")
+    // Внешний контур
+    resistor-better("R1", "1", "2", label: (content: $R_1$, anchor: "right"), arrow-label: $I_1$, arrow-side: "left", arrow-dir: "forward")
+    resistor-better("R5", "2", "3", label: (content: $R_5$, anchor: "left"), arrow-label: $I_5$, arrow-side: "right", arrow-dir: "forward")
+    resistor-better("R3", "1", "3", label: (content: $R_3$, anchor: "bottom"), arrow-label: $I_3$, arrow-side: "top", arrow-dir: "forward")
 
-  // Внутренняя звезда
-  resistor-better("R6", "2", "4", label: (content: $R_6$, anchor: "right"), arrow-label: $I_6$, arrow-side: "left", arrow-dir: "forward")
+    // Внутренняя звезда
+    resistor-better("R6", "2", "4", label: (content: $R_6$, anchor: "right"), arrow-label: $I_6$, arrow-side: "left", arrow-dir: "forward")
 
-  // Ветвь 4-1 (с E2)
-  resistor-better("R2", "4", "5", label: (content: $R_2$, anchor: "top"))
-  source-better("E2", "5", "1", position: 15%, arrow-dir: "forward", label: (content: $E_2$, anchor: "bottom"))
+    // Ветвь 4-1 (с E2)
+    resistor-better("R2", "4", "5", position: 50%, label: (content: $R_2$, anchor: "top"), arrow-label: $I_2$, arrow-side: "right", arrow-dir: "forward")
+    source-better("E2", "5", "1", position: 30%, arrow-dir: "forward", label: (content: $E_2$, anchor: "bottom"))
 
-  // Ветвь 4-3 (с E4)
-  resistor-better("R4", "4", "6", label: (content: $R_4$, anchor: "top"))
-  source-better("E4", "6", "3", position: 15%, arrow-dir: "forward", label: (content: $E_4$, anchor: "bottom"))
+    // Ветвь 4-3 (с E4)
+    resistor-better("R4", "4", "6", label: (content: $R_4$, anchor: "top"), arrow-label: $I_4$, arrow-side: "left", arrow-dir: "forward")
+    source-better("E4", "6", "3", position: 30%, arrow-dir: "forward", label: (content: $E_4$, anchor: "bottom"))
 
-  ground-better("3", length: 1.2, spacing: 0.2)
-})
+    ground-better("3")
+  })
 
 #circuit-better(scale-factor: 100%, {
   import zap: *
