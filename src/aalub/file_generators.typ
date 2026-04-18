@@ -47,7 +47,8 @@
     let inputs = row.slice(0, num-inputs)
     let output = row.at(num-output)
 
-    if output == "x" {count_x += 1} else {count_1 += 1}
+    if output == "x" {count_x += 1}
+    if output == "1" {count_1 += 1}
   }
 
   lines.push(str(num-inputs))
