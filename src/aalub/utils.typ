@@ -1,6 +1,6 @@
 #import "maps.typ": *
 #import "map-converters.typ": tt-to-karnaugh, tt-to-veitch
-#import "formatters.typ": get-mcnf, get-mdnf
+#import "boolean-formatters.typ": get-mcnf, get-mdnf
 
 // Универсальная функция для отрисовки карты Карно и вывода формулы
 #let draw-map-block(
