@@ -3,9 +3,9 @@
   title,             // Строка, например "OCHU" или "OCHS"
   data,              // Данные таблицы (массив массивов, как encoded-ochu)
   input-headers,     // Массив имен входных переменных, например ("a", "b", "c", "d", "e")
-  output-headers,    // Массив имен выходных переменных, например ("F1", "F2", "F3", "F4")
-  num-inputs         // Количество входных колонок для разделения
+  output-headers    // Массив имен выходных переменных, например ("F1", "F2", "F3", "F4")
 ) = {
+  let num-inputs = input-headers.len()
   let lines = ()
 
   // Строка 1: Заголовок
@@ -36,9 +36,10 @@
 #let generate-rots-file-content(
   title,             // Строка, например "OCHU" или "OCHS"
   data,              // Данные таблицы (массив массивов, как encoded-ochu)
-  num-inputs,        // Количество входных колонок
-  num-output,        // Номер выходной колонока
+  input-labels,     // Массив имен входных переменных, например ("a", "b", "c", "d", "e")
+  num-output        // Номер выходной колонока
 ) = {
+  let num-inputs = input-labels.len()
   let lines = ()
 
   let count_1 = 0
@@ -67,6 +68,10 @@
     let output = row.at(num-output)
 
     if output == "x" {lines.push(inputs.join(""))}
+  }
+
+  for label in input-labels {
+    lines.push(label)
   }
 
   return lines.join("\n")
