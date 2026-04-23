@@ -62,8 +62,8 @@
 
     let data-h = data-inputs * pin-step
     let addr-h = addr-inputs * pin-step
-    let H = data-h + addr-h
-    let y-split = -data-h
+    let H = data-h + addr-h + 1
+    let y-split = -data-h - 0.5
     let R = 0.1
 
     rect((0, 0), (width, -H), fill: white)
@@ -73,14 +73,14 @@
     content(((label-width + width) / 2, -0.4), text(size: 10pt)[MUX])
 
     for i in range(data-inputs) {
-      let y = - (i + 0.5) * pin-step
-      content((label-width / 2, y), text(size: 9pt, style: "italic")[#data-label#i])
+      let y = - (i + 1) * pin-step
+      content((label-width / 2, y), text(size: 8pt, style: "italic")[#data-label#i])
       anchor("in-d" + str(i), (0, y))
     }
 
     for i in range(addr-inputs) {
-      let y = y-split - (i + 0.5) * pin-step
-      content((label-width / 2, y), text(size: 9pt, style: "italic")[#addr-label#i])
+      let y = y-split - (i + 1) * pin-step
+      content((label-width / 2, y), text(size: 8pt, style: "italic")[#addr-label#i])
       anchor("in-a" + str(i), (0, y))
     }
 
@@ -235,7 +235,10 @@
 // ==========================================
 // 5. ТЕСТОВАЯ СЦЕНА (Идеально по ГОСТу)
 // ==========================================
+
 #align(center)[
+  #set text(font: "GOST Type B", size: 10pt)
+  #show math.equation: set text(font: "STIX Two Math", size: 10pt)
   #cetz.canvas(length: 1cm, {
     import cetz.draw: *
 
@@ -259,7 +262,7 @@
 
     // 3. СТАВИМ ЛОГИЧЕСКИЕ ЭЛЕМЕНТЫ СПРАВА ОТ ШИНЫ
     logic-gate("and1", "&", (LAYERS.at(0), -1), inputs: 2)
-    logic-gate("and2", "&", (LAYERS.at(0), -4), inputs: 2)
+    logic-gate("and2", "&", (LAYERS.at(0), -4.5), inputs: 2)
 
     mux("m1", (LAYERS.at(1), -2), data-inputs: 4, addr-inputs: 2)
 

@@ -6,6 +6,7 @@
 
 ### Requirements:
 * Times New Roman (and **Bold**, _Italic_, etc...) installed in system ([Linux MS fonts guide](https://linuxcapable.com/install-microsoft-fonts-on-fedora-linux/))
+* GOST Type A (and B and their variations ...) installed in system (just .ttf from any website)
 * typst >= 0.14.2
 
 ## Quick start:
