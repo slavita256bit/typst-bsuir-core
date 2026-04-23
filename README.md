@@ -18,8 +18,8 @@
 * now use can use it with ``#import "@local/typst-bsuir-core:x.x.x": *``
 
 ## To put this project into LLM:
-I used:
-``folder2text . my-lib.txt --filter ".idea,*.txt"`` ([folder2text](https://github.com/oritromax/folder2text))
+I used, just as example:
+``folder2text ./src/aalub --tree -o my-lib.txt`` ([folder2text](https://github.com/chibixar/folder2text))
 
 ## Projects with typst-bsuir-core:
 * ТЭЦ
