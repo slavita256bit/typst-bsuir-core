@@ -36,7 +36,7 @@
   LAYER_1_X: 1,
   LAYER_2_X: 4,
   PIN_STEP: 0.5,
-  GATE_Y_SPACING: 2,
+  GATE_Y_SPACING: 3,
   FUNC_Y_SPACING: 0.5
 )
 
