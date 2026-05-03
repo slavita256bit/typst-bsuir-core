@@ -10,7 +10,7 @@
 * typst >= 0.14.2
 
 ## Quick start:
-* in progress (package will be published)
+* IN PROGRESS (package will be published)
 
 ## Build locally:
 * install [utpm 3.0.0](https://github.com/typst-community/utpm) (you have to build it yourself)
@@ -26,6 +26,7 @@ I used, just as example:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
   * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
+  * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3) ((приколы с комплексными числами)) (IN PROGRESS)
 * АИЛОЦУ
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1) (IN PROGRESS)
 
@@ -44,6 +45,7 @@ I used, just as example:
 * [utpm](https://github.com/typst-community/utpm) is used to create package
 
 ## Todo:
+* add **just** file for easier developing
 * finish aalub cource project
 * make separate dependencies.typ file
 * add licence file

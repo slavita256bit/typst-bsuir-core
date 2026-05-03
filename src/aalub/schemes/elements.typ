@@ -1,5 +1,17 @@
 #import "@preview/cetz:0.5.0"
 
+#let GRID_DX = 1.5
+#let GRID_DY = 1.5
+
+// Функция конвертации виртуальных координат (Колонка, Строка) в координаты CetZ
+// x_col: от 0 до бесконечности (слева направо)
+// y_row: от 0 до бесконечности (сверху ВНИЗ)
+#let g-pt(c, r) = (c * GRID_DX, -r * GRID_DY)
+
+// Для удобства: получение только X или только Y
+#let g-x(c) = c * GRID_DX
+#let g-y(r) = -r * GRID_DY
+
 // ==========================================
 // 1. БАЗОВЫЙ ЛОГИЧЕСКИЙ ВЕНТИЛЬ
 // ==========================================
@@ -121,37 +133,34 @@
 // 4. ЕДИНАЯ ШИНА И ЕЕ ИНТЕРФЕЙС
 // ==========================================
 
-// Отрисовка самой шины
-#let draw-bus(x, y-start, y-end) = {
-  cetz.draw.line((x, y-start), (x, y-end), stroke: 2pt)
+// Отрисовка магистрали шины (теперь поддерживает ломаные линии через верх)
+#let draw-bus(..pts) = {
+  cetz.draw.line(..pts.pos(), stroke: 2pt)
 }
 
 // Ввод простого сигнала в шину
 #let bus-in(bus-x, y, label, num) = {
   import cetz.draw: *
-  let start-x = bus-x - 3
+  let start-x = bus-x - 2.5
   wire((start-x, y), (bus-x, y), routing: "direct")
-  content((start-x + 0.4, y + 0.3), label, anchor: "east")
+  content((start-x + 0.2, y + 0.3), label, anchor: "east")
   content((bus-x - 0.1, y + 0.15), text(size: 8pt)[#num], anchor: "south-east")
 }
 
-// Ввод сигнала с инверсией (создает 2 связи на шине)
+// Ввод сигнала с инверсией
 #let bus-in-inv(bus-x, y-dir, label, num-dir, num-inv, basis: "NOT") = {
   import cetz.draw: *
-  let y-inv = y-dir - 1.0 // Инверсный сигнал будет на 1 клетку ниже
+  let y-inv = y-dir - 1.0
   let y-inv-out = y-dir - 1.25
-  let split-x = bus-x - 2.5
-  let gate-x = bus-x - 1.6
+  let split-x = bus-x - 2.0
+  let gate-x = bus-x - 1.2
 
-  // 1. Прямой сигнал
   wire((split-x - 0.5, y-dir), (bus-x, y-dir), routing: "direct")
   content((split-x - 0.1, y-dir + 0.3), label, anchor: "east")
   content((bus-x - 0.1, y-dir + 0.15), text(size: 8pt)[#num-dir], anchor: "south-east")
 
-  // Узел ветвления
   circle((split-x, y-dir), radius: 0.05, fill: black)
 
-  // 2. Логика инвертора
   let sym = "1"; let inps = 1
   if basis == "NAND" { sym = "&"; inps = 2 }
   if basis == "NOR"  { sym = "1"; inps = 2 }
@@ -159,12 +168,10 @@
   let gate-name = "inv_gate_" + str(num-inv)
   logic-gate(gate-name, sym, (gate-x, y-inv + 0.5), inputs: inps, inv-out: true)
 
-  // Подключение к инвертору
   wire((split-x, y-dir), (split-x, y-inv-out), routing: "direct")
   if inps == 1 {
     wire((split-x, y-inv-out), gate-name + ".in-1", routing: "direct")
   } else {
-    // Разветвляем на 2 входа (замыкаем)
     let branch-x = split-x + 0
     wire((split-x, y-inv), (branch-x, y-inv), routing: "direct")
     circle((branch-x, y-inv), radius: 0.05, fill: black)
@@ -172,30 +179,16 @@
     wire((branch-x, y-inv), gate-name + ".in-2", routing: "|-")
   }
 
-  // 3. Выход инвертора в шину
   wire(gate-name + ".out", (bus-x, y-inv-out), routing: "direct")
   content((bus-x - 0.1, y-inv-out + 0.1), text(size: 8pt)[#num-inv], anchor: "south-east")
 }
 
-#let bus-tap(bus-x, target, num, y: auto, routing: auto, z-fract: 50%) = {
+// Взятие сигнала из шины
+#let bus-tap(bus-x, target, num, routing: "|-", z-fract: 50%) = {
   import cetz.draw: *
+  let start-coord = ((bus-x, 0), "|-", target)
 
-  // |- берет X слева, Y справа. Это гарантирует горизонтальную линию от шины!
-  let start-coord = if y == auto {
-    ((bus-x, 0), "|-", target)
-  } else {
-    (bus-x, y)
-  }
-
-  let actual-routing = if routing != auto {
-    routing
-  } else if y == auto {
-    "direct" // Идеально ровно
-  } else {
-    "|-"     // С изгибом, если задан ручной Y
-  }
-
-  wire(start-coord, target, routing: actual-routing, z-fract: z-fract, dot: "start")
+  wire(start-coord, target, routing: routing, z-fract: z-fract, dot: "start")
 
   content(
     (rel: (0.1, 0.15), to: start-coord),
