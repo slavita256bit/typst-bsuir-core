@@ -182,7 +182,7 @@
           if tv.val == 1 { term-content.push(math.overline(tv.name)) }
           else { term-content.push(tv.name) }
         }
-        terms.push($(#term-content.join($+$))'$) // Используем кавычки для группировки
+        terms.push($(#term-content.join($+$))$) // Используем кавычки для группировки
       }
     }
   }

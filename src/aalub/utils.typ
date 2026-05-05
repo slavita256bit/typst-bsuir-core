@@ -39,3 +39,8 @@
 
     $ #eq-name = #eq $
 ]
+
+#let unbreakable(body) = block(breakable: false, width: 100%, spacing: 0em)[
+//   #h(1.25cm)
+  #pad(y: 0.8em, body)
+]
