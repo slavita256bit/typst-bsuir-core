@@ -56,9 +56,14 @@
   bus-vars,
   funcs,
   logic-basis: "A1",
-  bus-basis: auto
+  bus-basis: auto,
+  layout: (:),
+  draw-inputs: true,
+  extra_funcs: ()
 ) = {
   import cetz.draw: *
+
+  let lyt = LAYOUT + layout
 
   let actual-bus-basis = if bus-basis == auto { logic-basis } else { bus-basis }
   let bus-inv-type = get-bus-basis(actual-bus-basis)
@@ -69,7 +74,7 @@
   // ПРИНУДИТЕЛЬНО задаем, что прямые линии нужны всем объявленным переменным
   for v in bus-vars { needed-vars.insert(v.id, (dir: true, inv: false)) }
 
-  for func in funcs {
+  for func in (funcs + extra_funcs) {
     for term in func.terms {
       for sig in term {
         let is-inv = sig.starts-with("!")
@@ -94,12 +99,16 @@
     if usage.inv {
       bus-signals.insert(v.id, current-num)
       bus-signals.insert("!" + v.id, current-num + 1)
-      bus-in-inv(LAYOUT.BUS_X, current-y, v.label, current-num, current-num + 1, basis: bus-inv-type)
+      if draw-inputs {
+        bus-in-inv(lyt.BUS_X, current-y, v.label, current-num, current-num + 1, basis: bus-inv-type)
+      }
       current-num += 2
       current-y -= 2.5
     } else {
       bus-signals.insert(v.id, current-num)
-      bus-in(LAYOUT.BUS_X, current-y, v.label, current-num)
+      if draw-inputs {
+        bus-in(lyt.BUS_X, current-y, v.label, current-num)
+      }
       current-num += 1
       current-y -= 1.0
     }
@@ -110,35 +119,57 @@
   // 3. ПОСЛЕДОВАТЕЛЬНО СТРОИМ КАЖДУЮ ФУНКЦИЮ
   for (f-idx, func) in funcs.enumerate() {
     let l1-outputs = ()
+    let l1-y-coords = ()
     let func-start-y = current-y
 
     // --- СЛОЙ 1 И ПРОМЕЖУТОЧНЫЙ СЛОЙ (MID) ---
     for (t-idx, term) in func.terms.enumerate() {
+      if basis-cfg.mid != none and term.len() == 1 and not basis-cfg.inv1 {
+        // Если это базис с отдельным инвертором (как А5),
+        // и терм состоит из одного сигнала, и на выходе элемента 1-го слоя нет инверсии,
+        // то мы пропускаем и элемент 1-го, и промежуточный слой!
+        let sig = term.first()
+        let pin-num = bus-signals.at(sig)
+        let tap-point-y = current-y - 0.75 // Примерная координата для отвода от шины
+
+        // Создаем "виртуальный" выходной пин, как будто он есть
+        let virtual-out-name = "f" + str(f-idx) + "_l1_virt_" + str(t-idx)
+        anchor(virtual-out-name, (lyt.LAYER_2_X - 1.0, tap-point-y))
+
+        bus-tap(lyt.BUS_X, virtual-out-name, pin-num, routing: "-|")
+
+        l1-outputs.push(virtual-out-name)
+        current-y -= 2.5 // Оставляем место, как будто элемент был
+        continue // Переходим к следующему терму
+      }
+
       let gate-name = "f" + str(f-idx) + "_l1_" + str(t-idx)
+
+      l1-y-coords.push(current-y)
 
       logic-gate(
         gate-name, basis-cfg.l1,
-        (LAYOUT.LAYER_1_X, current-y),
+        (lyt.LAYER_1_X, current-y),
         inputs: term.len(),
         inv-out: basis-cfg.inv1
       )
 
       for (j, sig) in term.enumerate() {
         let pin-num = bus-signals.at(sig)
-        bus-tap(LAYOUT.BUS_X, gate-name + ".in-" + str(j+1), pin-num, z-fract: 30%)
+        bus-tap(lyt.BUS_X, gate-name + ".in-" + str(j+1), pin-num, z-fract: 30%)
       }
 
       if basis-cfg.mid != none {
         let mid-name = "f" + str(f-idx) + "_mid_" + str(t-idx)
         let inps = if basis-cfg.mid.at("tied", default: false) { 2 } else { 1 }
 
-        let h-l1 = calc.max(1.5, (term.len() - 1) * LAYOUT.PIN_STEP + 0.8)
-        let h-mid = calc.max(1.5, (inps - 1) * LAYOUT.PIN_STEP + 0.8)
+        let h-l1 = calc.max(1.5, (term.len() - 1) * lyt.PIN_STEP + 0.8)
+        let h-mid = calc.max(1.5, (inps - 1) * lyt.PIN_STEP + 0.8)
         let mid-y = current-y - h-l1 / 2 + h-mid / 2
 
         logic-gate(
           mid-name, basis-cfg.mid.sym,
-          (LAYOUT.LAYER_MID_X, mid-y),
+          (lyt.LAYER_MID_X, mid-y),
           inputs: inps,
           inv-out: basis-cfg.mid.inv
         )
@@ -146,7 +177,7 @@
         if inps == 1 {
           wire(gate-name + ".out", mid-name + ".in-1", routing: "direct")
         } else {
-          let split-x = LAYOUT.LAYER_MID_X - 0.5
+          let split-x = lyt.LAYER_MID_X - 0.5
           let actual-out-y = current-y - h-l1 / 2
           wire(gate-name + ".out", (split-x, actual-out-y), routing: "direct")
           circle((split-x, actual-out-y), radius: 0.05, fill: black)
@@ -159,10 +190,10 @@
         l1-outputs.push(gate-name + ".out")
       }
 
-      current-y -= term.len() * LAYOUT.PIN_STEP + 1
+      current-y -= term.len() * lyt.PIN_STEP + 1
     }
 
-    let center-y = (func-start-y + current-y + LAYOUT.GATE_Y_SPACING) / 2
+    let center-y = (l1-y-coords.first() + l1-y-coords.last()) / 2
     let final-out = none
     let actual-out-y = 0.0 // Абсолютная координата выхода Y
 
@@ -172,7 +203,7 @@
 
       logic-gate(
         gate-name, basis-cfg.l2,
-        (LAYOUT.LAYER_2_X, center-y),
+        (lyt.LAYER_2_X, center-y),
         inputs: l1-outputs.len(),
         inv-out: basis-cfg.inv2
       )
@@ -192,13 +223,13 @@
       final-out = gate-name + ".out"
 
       // Идеально точный расчет Y выхода 2-го слоя
-      let h-l2 = calc.max(1.5, (l1-outputs.len() - 1) * LAYOUT.PIN_STEP + 0.8)
+      let h-l2 = calc.max(1.5, (l1-outputs.len() - 1) * lyt.PIN_STEP + 0.8)
       actual-out-y = center-y - h-l2 / 2
 
     } else if l1-outputs.len() == 1 {
       final-out = l1-outputs.first()
       // Идеально точный расчет Y выхода единственного элемента 1-го слоя
-      let h-l1 = calc.max(1.5, (func.terms.first().len() - 1) * LAYOUT.PIN_STEP + 0.8)
+      let h-l1 = calc.max(1.5, (func.terms.first().len() - 1) * lyt.PIN_STEP + 0.8)
       actual-out-y = func-start-y - h-l1 / 2
     }
 
@@ -208,9 +239,9 @@
     if func-inv {
       let out-inv-name = "f" + str(f-idx) + "_out_inv"
       let inps = if basis-cfg.out-inv.tied { 2 } else { 1 }
-      let h-inv = calc.max(1.5, (inps - 1) * LAYOUT.PIN_STEP + 0.8)
+      let h-inv = calc.max(1.5, (inps - 1) * lyt.PIN_STEP + 0.8)
 
-      let inv-x = if l1-outputs.len() > 1 { LAYOUT.LAYER_OUT_X } else { LAYOUT.LAYER_2_X }
+      let inv-x = if l1-outputs.len() > 1 { lyt.LAYER_OUT_X } else { lyt.LAYER_2_X }
       // Смещаем инвертор по Y так, чтобы его входы идеально совпадали с выходом L2
       let inv-y = actual-out-y + h-inv / 2
 
@@ -237,18 +268,18 @@
     }
 
     // --- ВЫВОД ЯРЛЫКА ФУНКЦИИ ---
-    let text-align-x = LAYOUT.LAYER_OUT_X + 2.0
+    let text-align-x = lyt.LAYER_OUT_X + 2.0
     let end-pt = (final-out, "-|", (text-align-x, actual-out-y))
 
     wire(final-out, end-pt, routing: "direct")
-    content((rel: (0.2, 0.2), to: end-pt), func.label, anchor: "west")
+    content((rel: (-0.4, 0.3), to: end-pt), func.label, anchor: "west")
 
-    current-y -= LAYOUT.FUNC_Y_SPACING
+    current-y -= lyt.FUNC_Y_SPACING
   }
 
   // 4. ДОРИСОВЫВАЕМ МАГИСТРАЛЬ ШИНЫ
-  let bus-end-y = current-y + LAYOUT.FUNC_Y_SPACING - 1.0
-  draw-bus(LAYOUT.BUS_X, bus-start-y, bus-end-y)
+  let bus-end-y = current-y + lyt.FUNC_Y_SPACING - 1.0
+  draw-bus(lyt.BUS_X, bus-start-y, bus-end-y)
 }
 
 //=================================
@@ -260,7 +291,7 @@
   (id: "x2", label: $x_2$),
   (id: "y1", label: $y_1$),
   (id: "y2", label: $y_2$),
-  (id: "h",  label: $h$)
+  (id: "h",  label: $h " "$)
 )
 
 // Сложная функция с 4 термами

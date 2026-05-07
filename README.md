@@ -1,7 +1,7 @@
 # BSUIR typst core
 
 ### Modules:
-* АиЛОЦУ = AaLUB (Arithmetic and Logical Units Basics)
+* АиЛОЦУ = AaLUB (Arithmetic and Logical Units Basics) (a lot of hardcode specific to my variant)
 * ТЭЦ = ToEC (Theory of Electric Chains)
 
 ### Requirements:
@@ -50,3 +50,4 @@ I used, just as example:
 * make separate dependencies.typ file
 * add licence file
 * publish package
+* maybe: remove aalub hardcode specific to my variant
