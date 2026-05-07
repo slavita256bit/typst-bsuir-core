@@ -1,5 +1,5 @@
 #import "@preview/cetz:0.5.0"
-#import "elements.typ": logic-gate, mux, wire, bus-in, bus-in-inv, draw-bus, bus-tap
+#import "elements_complex.typ": logic-gate, mux, wire, bus-in, bus-in-inv, draw-bus, bus-tap
 
 // ==========================================
 // 1. DSL (ФУНКЦИИ ДЛЯ ОПИСАНИЯ СХЕМЫ)
