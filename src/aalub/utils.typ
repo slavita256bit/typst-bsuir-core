@@ -40,7 +40,8 @@
     $ #eq-name = #eq $
 ]
 
-#let unbreakable(body) = block(breakable: false, width: 100%, spacing: 0em)[
-//   #h(1.25cm)
-  #pad(y: 0.8em, body)
+#let unbreakable(body) = block(breakable: false, width: 100%, spacing: 0.8em)[
+//   #h(0.8em)
+  #body
+//   #h(0.8em)
 ]
