@@ -95,7 +95,7 @@
 }
 
 // Функция для разбиения огромных матриц на несколько страниц А4
-#let render-split-roth-table(csv-data, caption-text, lbl, chunks: 3, overlap-cols: 2, text-size: 12pt, cell-padding: 0.2em) = {
+#let render-split-roth-table(csv-data, caption-text, lbl, chunks: 3, overlap-cols: 0, text-size: 12pt, cell-padding: 0.2em) = {
   let cols = csv-data.at(0).len()
   let data-cols = cols - 1 // Исключаем первый столбец с заголовками строк
 
@@ -103,10 +103,16 @@
   let chunk-size = calc.ceil((data-cols + (chunks - 1) * overlap-cols) / chunks)
 
   for i in range(chunks) {
+//     let left-margin = if i == 0 { 10mm } else { 0mm }
+//     let right-margin = if i == chunks - 1 { 10mm } else { 0mm }
+
+    let left-margin = if i == 0 { 10mm } else { 10mm }
+    let right-margin = if i == chunks - 1 { 10mm } else { 10mm }
+
     set page(
       width: 210mm,
       height: 279mm,
-      margin: (top: 10mm, left: 5mm, right: 5mm, bottom: 0mm),
+      margin: (top: 20mm, left: left-margin, right: right-margin, bottom: 0mm),
       numbering: if i == chunks - 1 { "1" } else { none }
     )
 
@@ -134,7 +140,9 @@
 //     let current-caption = if i == 0 { caption-text } else { none }
     let current-caption
 
-    pad(10pt)[
+    show figure: set align(left)
+
+    align(left)[
       #let fig = figure(
         caption: current-caption,
         table(
