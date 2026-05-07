@@ -141,7 +141,7 @@
 // Ввод простого сигнала в шину
 #let bus-in(bus-x, y, label, num) = {
   import cetz.draw: *
-  let start-x = bus-x - 2.5
+  let start-x = bus-x - 3.5 // Удлинили линию, чтобы соответствовать инвертору
   wire((start-x, y), (bus-x, y), routing: "direct")
   content((start-x + 0.2, y + 0.3), label, anchor: "east")
   content((bus-x - 0.1, y + 0.15), text(size: 8pt)[#num], anchor: "south-east")
@@ -150,37 +150,45 @@
 // Ввод сигнала с инверсией
 #let bus-in-inv(bus-x, y-dir, label, num-dir, num-inv, basis: "NOT") = {
   import cetz.draw: *
-  let y-inv = y-dir - 1.0
-  let y-inv-out = y-dir - 1.25
-  let split-x = bus-x - 2.0
-  let gate-x = bus-x - 1.2
+  let y-inv-out = y-dir - 1.0 // Сдвигаем выходную линию компактнее (на 1 шаг вниз)
+  let split-x = bus-x - 3.0   // Существенно отодвигаем узел от шины
+  let gate-x = bus-x - 2.2    // Отодвигаем сам вентиль левее от шины
 
+  // 1. Прямой сигнал
   wire((split-x - 0.5, y-dir), (bus-x, y-dir), routing: "direct")
   content((split-x - 0.1, y-dir + 0.3), label, anchor: "east")
   content((bus-x - 0.1, y-dir + 0.15), text(size: 8pt)[#num-dir], anchor: "south-east")
 
+  // Узел ветвления
   circle((split-x, y-dir), radius: 0.05, fill: black)
 
+  // 2. Логика инвертора
   let sym = "1"; let inps = 1
   if basis == "NAND" { sym = "&"; inps = 2 }
   if basis == "NOR"  { sym = "1"; inps = 2 }
 
   let gate-name = "inv_gate_" + str(num-inv)
-  logic-gate(gate-name, sym, (gate-x, y-inv + 0.5), inputs: inps, inv-out: true)
+  let H = calc.max(1.5, (inps - 1) * 0.5 + 0.8)
 
+  // Идеально центрируем элемент по линии выхода
+  logic-gate(gate-name, sym, (gate-x, y-inv-out + H / 2), inputs: inps, inv-out: true)
+
+  // Подключение к инвертору
   wire((split-x, y-dir), (split-x, y-inv-out), routing: "direct")
   if inps == 1 {
     wire((split-x, y-inv-out), gate-name + ".in-1", routing: "direct")
   } else {
+    // Разветвляем на 2 входа (замыкаем)
     let branch-x = split-x + 0
-    wire((split-x, y-inv), (branch-x, y-inv), routing: "direct")
-    circle((branch-x, y-inv), radius: 0.05, fill: black)
-    wire((branch-x, y-inv), gate-name + ".in-1", routing: "|-")
-    wire((branch-x, y-inv), gate-name + ".in-2", routing: "|-")
+    wire((split-x, y-inv-out), (branch-x, y-inv-out), routing: "direct")
+    circle((branch-x, y-inv-out), radius: 0.05, fill: black)
+    wire((branch-x, y-inv-out), gate-name + ".in-1", routing: "|-")
+    wire((branch-x, y-inv-out), gate-name + ".in-2", routing: "|-")
   }
 
+  // 3. Выход инвертора в шину
   wire(gate-name + ".out", (bus-x, y-inv-out), routing: "direct")
-  content((bus-x - 0.1, y-inv-out + 0.1), text(size: 8pt)[#num-inv], anchor: "south-east")
+  content((bus-x - 0.1, y-inv-out + 0.15), text(size: 8pt)[#num-inv], anchor: "south-east")
 }
 
 // Взятие сигнала из шины

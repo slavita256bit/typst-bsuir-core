@@ -45,6 +45,9 @@ I used, just as example:
 * [utpm](https://github.com/typst-community/utpm) is used to create package
 
 ## Todo:
+* think about cross-file-link structure
+* move some common things from aalub courceproject to common file
+* better project structure
 * add **just** file for easier developing
 * finish aalub cource project
 * make separate dependencies.typ file

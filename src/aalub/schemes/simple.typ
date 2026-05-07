@@ -59,7 +59,8 @@
   bus-basis: auto,
   layout: (:),
   draw-inputs: true,
-  extra_funcs: ()
+  extra_funcs: (),
+  bus-end-y-override: none
 ) = {
   import cetz.draw: *
 
@@ -278,7 +279,11 @@
   }
 
   // 4. ДОРИСОВЫВАЕМ МАГИСТРАЛЬ ШИНЫ
-  let bus-end-y = current-y + lyt.FUNC_Y_SPACING - 1.0
+  let bus-end-y = if bus-end-y-override != none {
+    bus-end-y-override
+  } else {
+    current-y + lyt.FUNC_Y_SPACING - 1.0
+  }
   draw-bus(lyt.BUS_X, bus-start-y, bus-end-y)
 }
 
@@ -318,6 +323,7 @@
   ),
   z-fracts: (50%, 50%),
 )
+
 
 //=================================
 // ПРИМЕР 1: БАЗИС "ИЛИ-НЕ" (NOR / A7)
