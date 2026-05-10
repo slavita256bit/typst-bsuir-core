@@ -1,6 +1,6 @@
 #import "fmt.typ": *
 
-#let mathtype-mimic(receive: false, digits: 3, body) = {
+#let mathtype-mimic(receive: false, digits: 3, spacing: 0.6em, body) = {
   // Set the MathType-equivalent font
   show math.equation: set text(font: "STIX Two Math", size: 14pt)
 
@@ -103,7 +103,7 @@
     #if (receive) [Получаем]
     #align(center, block(above: 2em, below: 2em)[
       // 2. Make the equations INSIDE this group tightly packed
-      #show math.equation.where(block: true): set block(spacing: 0.6em)
+      #show math.equation.where(block: true): set block(spacing: spacing)
 
       #body
     ])

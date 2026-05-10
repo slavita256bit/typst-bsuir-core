@@ -46,7 +46,7 @@
   let r = to-rect(c)
   let re-part = _fmt(r.re, digits: r-digits)
   let im-part = _fmt(calc.abs(r.im), digits: r-digits)
-  let sign_im = if r.im < 0 { "-" } else { "+" }
+  let sign_im = if r.im < 0 { $-$ } else { $+$ }
 
   let j_signed = if p.ang < 0 { $-j$ } else { $j$ }
   let ang = calc.abs(p.ang)

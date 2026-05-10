@@ -26,9 +26,10 @@ I used, just as example:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
   * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
-  * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3) ((приколы с комплексными числами)) (IN PROGRESS)
+  * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3) ((приколы с комплексными числами))
+  * [Типовой расчёт часть 1](https://github.com/slavita256bit/toec-typical-calculations-1)
 * АИЛОЦУ
-  * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1) (IN PROGRESS)
+  * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1)
 
 ## Dependencies (and credits):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
@@ -43,15 +44,17 @@ I used, just as example:
 
 * [typst](https://github.com/typst/typst) for making this possible
 * [utpm](https://github.com/typst-community/utpm) is used to create package
+* [gost eskd/espd frames](https://github.com/typst-gost/stamp-eskd-spds/)
 
 ## Todo:
 * think about cross-file-link structure
 * aalub complex scheme files are obsolete a bit, remove code duplication
 * move some common things from aalub courceproject to common file
 * better project structure
-* add **just** file for easier developing
-* finish aalub cource project
+* add **just** file for easier developing (for deploy/llm file generating)
 * make separate dependencies.typ file
 * add licence file
 * publish package
 * maybe: remove aalub hardcode specific to my variant
+
+P.S. After some time, I realized that a lot for things can be done better and there is a lot of hardcode, but I have no enough impulse to rewrite this completely 
