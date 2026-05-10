@@ -106,7 +106,7 @@
 //     let left-margin = if i == 0 { 10mm } else { 0mm }
 //     let right-margin = if i == chunks - 1 { 10mm } else { 0mm }
 
-    let left-margin = if i == 0 { 10mm } else { 10mm }
+    let left-margin = if i == 0 { 20mm } else { 20mm }
     let right-margin = if i == chunks - 1 { 10mm } else { 10mm }
 
     set page(
