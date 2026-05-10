@@ -46,6 +46,7 @@ I used, just as example:
 
 ## Todo:
 * think about cross-file-link structure
+* aalub complex scheme files are obsolete a bit, remove code duplication
 * move some common things from aalub courceproject to common file
 * better project structure
 * add **just** file for easier developing

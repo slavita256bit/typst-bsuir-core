@@ -7,20 +7,23 @@
   name, symbol, pos,
   inputs: 2,
   inv-in: (), inv-out: false,
-  width: 1,
+  width: 1.5,
   pin-step: 0.5
 ) = {
   import cetz.draw: *
+
   group(name: name, {
+    set-style(stroke: 0.5mm)
     translate(pos)
 
     let span = (inputs - 1) * pin-step
-    let H = calc.max(1.5, span + 0.8)
+    let H = calc.max(2, span + 1)
     let R = 0.1
 
     rect((0, 0), (width, -H), fill: white)
-    content((width / 2, -0.35), text(size: 11pt)[#symbol])
+    content((width / 2, -0.5), text(size: 14pt)[#symbol])
 
+    if inputs == 2 {pin-step = 1; span = 1} //костыль но норм
     let start-y = -H / 2 + span / 2
     for i in range(inputs) {
       let pin-y = start-y - i * pin-step
@@ -54,10 +57,11 @@
   data-inputs: 4, addr-inputs: 2,
   data-label: "D", addr-label: "A",
   inv-out: false,
-  width: 2, label-width: 0.5, pin-step: 0.5
+  width: 2.5, label-width: 1, pin-step: 0.5
 ) = {
   import cetz.draw: *
   group(name: name, {
+    set-style(stroke: 0.5mm)
     translate(pos)
 
     let data-h = data-inputs * pin-step
@@ -70,17 +74,17 @@
     line((label-width, 0), (label-width, -H))
     line((0, y-split), (label-width, y-split))
 
-    content(((label-width + width) / 2, -0.4), text(size: 10pt)[MUX])
+    content(((label-width + width) / 2, -0.5), text(size: 14pt)[MUX])
 
     for i in range(data-inputs) {
       let y = - (i + 1) * pin-step
-      content((label-width / 2, y), text(size: 8pt, style: "italic")[#data-label#i])
+      content((label-width / 2 - 0.1, y), text(size: 14pt)[#data-label#i])
       anchor("in-d" + str(i), (0, y))
     }
 
     for i in range(addr-inputs) {
       let y = y-split - (i + 1) * pin-step
-      content((label-width / 2, y), text(size: 8pt, style: "italic")[#addr-label#i])
+      content((label-width / 2 - 0.1, y), text(size: 14pt)[#addr-label#i])
       anchor("in-a" + str(i), (0, y))
     }
 
@@ -123,13 +127,13 @@
 
 // Отрисовка самой шины
 #let draw-bus(x, y-start, y-end) = {
-  cetz.draw.line((x, y-start), (x, y-end), stroke: 2pt)
+  cetz.draw.line((x, y-start), (x, y-end), stroke: 1mm)
 }
 
 // Ввод простого сигнала в шину
 #let bus-in(bus-x, y, label, num) = {
   import cetz.draw: *
-  let start-x = bus-x - 3
+  let start-x = bus-x - 5
   wire((start-x, y), (bus-x, y), routing: "direct")
   content((start-x + 0.4, y + 0.3), label, anchor: "east")
   content((bus-x - 0.1, y + 0.15), text(size: 8pt)[#num], anchor: "south-east")
@@ -139,9 +143,9 @@
 #let bus-in-inv(bus-x, y-dir, label, num-dir, num-inv, basis: "NOT") = {
   import cetz.draw: *
   let y-inv = y-dir - 1.0 // Инверсный сигнал будет на 1 клетку ниже
-  let y-inv-out = y-dir - 1.25
-  let split-x = bus-x - 2.5
-  let gate-x = bus-x - 1.6
+  let y-inv-out = y-dir - 1.5
+  let split-x = bus-x - 4.5
+  let gate-x = bus-x - 3
 
   // 1. Прямой сигнал
   wire((split-x - 0.5, y-dir), (bus-x, y-dir), routing: "direct")
@@ -237,8 +241,8 @@
 // ==========================================
 
 #align(center)[
-  #set text(font: "GOST Type B", size: 10pt)
-  #show math.equation: set text(font: "STIX Two Math", size: 10pt)
+  #set text(font: "GOST Type B")
+  #show math.equation: set text(font: "STIX Two Math", 14pt)
   #cetz.canvas(length: 1cm, {
     import cetz.draw: *
 
@@ -253,11 +257,11 @@
     bus-in-inv(BUS_X, 0, $x_1$, 1, 2, basis: "NAND")
 
     // Допустим x2 в базисе ИЛИ-НЕ
-    bus-in-inv(BUS_X, -2.5, $x_2$, 3, 4, basis: "NOR")
+    bus-in-inv(BUS_X, -3.5, $x_2$, 3, 4, basis: "NOR")
 
     // Допустим h просто прямой
-    bus-in(BUS_X, -5, $h$, 5)
-    bus-in-inv(BUS_X, -6.5, $x_2$, 6, 7, basis: "NOT")
+    bus-in(BUS_X, -7, $h$, 5)
+    bus-in-inv(BUS_X, -8, $x_2$, 6, 7, basis: "NOT")
 
 
     // 3. СТАВИМ ЛОГИЧЕСКИЕ ЭЛЕМЕНТЫ СПРАВА ОТ ШИНЫ

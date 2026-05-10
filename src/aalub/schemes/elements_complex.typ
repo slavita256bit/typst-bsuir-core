@@ -19,7 +19,7 @@
   name, symbol, pos,
   inputs: 2,
   inv-in: (), inv-out: false,
-  width: 1,
+  width: 1.5,
   pin-step: 0.5
 ) = {
   import cetz.draw: *
@@ -27,11 +27,11 @@
     translate(pos)
 
     let span = (inputs - 1) * pin-step
-    let H = calc.max(1.5, span + 0.8)
+    let H = calc.max(2, span + 1)
     let R = 0.1
 
     rect((0, 0), (width, -H), fill: white)
-    content((width / 2, -0.35), text(size: 11pt)[#symbol])
+    content((width / 2, -0.35), text(font: "GOST Type B", size: 14pt)[#symbol])
 
     let start-y = -H / 2 + span / 2
     for i in range(inputs) {
@@ -66,7 +66,7 @@
   data-inputs: 4, addr-inputs: 2,
   data-label: "D", addr-label: "A",
   inv-out: false,
-  width: 2, label-width: 0.5, pin-step: 0.5
+  width: 2.5, label-width: 1, pin-step: 0.5
 ) = {
   import cetz.draw: *
   group(name: name, {
@@ -82,17 +82,17 @@
     line((label-width, 0), (label-width, -H))
     line((0, y-split), (label-width, y-split))
 
-    content(((label-width + width) / 2, -0.4), text(size: 10pt)[MUX])
+    content(((label-width + width) / 2, -0.6), text(font: "GOST Type B", size: 14pt)[MUX])
 
     for i in range(data-inputs) {
       let y = - (i + 1) * pin-step
-      content((label-width / 2, y), text(size: 8pt, style: "italic")[#data-label#i])
+      content((label-width / 2 - 0.1 + if i == 1 {-0.03} else {0}, y), text(font: "GOST Type B", size: 14pt, style: "italic")[#data-label#i])
       anchor("in-d" + str(i), (0, y))
     }
 
     for i in range(addr-inputs) {
       let y = y-split - (i + 1) * pin-step
-      content((label-width / 2, y), text(size: 8pt, style: "italic")[#addr-label#i])
+      content((label-width / 2 - 0.1 + if i == 1 {-0.03} else {0}, y), text(font: "GOST Type B", size: 14pt, style: "italic")[#addr-label#i])
       anchor("in-a" + str(i), (0, y))
     }
 
@@ -141,23 +141,23 @@
 // Ввод простого сигнала в шину
 #let bus-in(bus-x, y, label, num) = {
   import cetz.draw: *
-  let start-x = bus-x - 3.5 // Удлинили линию, чтобы соответствовать инвертору
+  let start-x = bus-x - 4.5 // Удлинили линию, чтобы соответствовать инвертору
   wire((start-x, y), (bus-x, y), routing: "direct")
   content((start-x + 0.2, y + 0.3), label, anchor: "east")
-  content((bus-x - 0.1, y + 0.15), text(size: 8pt)[#num], anchor: "south-east")
+  content((bus-x - 0.1, y + 0.15), text(font: "GOST Type B", size: 8pt)[#num], anchor: "south-east")
 }
 
 // Ввод сигнала с инверсией
 #let bus-in-inv(bus-x, y-dir, label, num-dir, num-inv, basis: "NOT") = {
   import cetz.draw: *
-  let y-inv-out = y-dir - 1.0 // Сдвигаем выходную линию компактнее (на 1 шаг вниз)
-  let split-x = bus-x - 3.0   // Существенно отодвигаем узел от шины
-  let gate-x = bus-x - 2.2    // Отодвигаем сам вентиль левее от шины
+  let y-inv-out = y-dir - 1.5 // Сдвигаем выходную линию компактнее (на 1 шаг вниз)
+  let split-x = bus-x - 4.0   // Существенно отодвигаем узел от шины
+  let gate-x = bus-x - 3.2    // Отодвигаем сам вентиль левее от шины
 
   // 1. Прямой сигнал
   wire((split-x - 0.5, y-dir), (bus-x, y-dir), routing: "direct")
   content((split-x - 0.1, y-dir + 0.3), label, anchor: "east")
-  content((bus-x - 0.1, y-dir + 0.15), text(size: 8pt)[#num-dir], anchor: "south-east")
+  content((bus-x - 0.1, y-dir + 0.15), text(font: "GOST Type B", size: 8pt)[#num-dir], anchor: "south-east")
 
   // Узел ветвления
   circle((split-x, y-dir), radius: 0.05, fill: black)
@@ -168,7 +168,7 @@
   if basis == "NOR"  { sym = "1"; inps = 2 }
 
   let gate-name = "inv_gate_" + str(num-inv)
-  let H = calc.max(1.5, (inps - 1) * 0.5 + 0.8)
+  let H = calc.max(2, (inps - 1) * 0.5 + 1)
 
   // Идеально центрируем элемент по линии выхода
   logic-gate(gate-name, sym, (gate-x, y-inv-out + H / 2), inputs: inps, inv-out: true)
@@ -188,7 +188,7 @@
 
   // 3. Выход инвертора в шину
   wire(gate-name + ".out", (bus-x, y-inv-out), routing: "direct")
-  content((bus-x - 0.1, y-inv-out + 0.15), text(size: 8pt)[#num-inv], anchor: "south-east")
+  content((bus-x - 0.1, y-inv-out + 0.15), text(font: "GOST Type B", size: 8pt)[#num-inv], anchor: "south-east")
 }
 
 // Взятие сигнала из шины
@@ -200,7 +200,7 @@
 
   content(
     (rel: (0.1, 0.15), to: start-coord),
-    text(size: 8pt)[#num],
+    text(font: "GOST Type B", size: 8pt)[#num],
     anchor: "south-west"
   )
 }

@@ -41,11 +41,11 @@
 #let LAYOUT = (
   BUS_X: 0,
   LAYER_1_X: 1.5,
-  LAYER_MID_X: 3.5,
-  LAYER_2_X: 6.0,
-  LAYER_OUT_X: 8.5,
+  LAYER_MID_X: 4,
+  LAYER_2_X: 8.0,
+  LAYER_OUT_X: 13,
   PIN_STEP: 0.5,
-  GATE_Y_SPACING: 3,
+  GATE_Y_SPACING: 1,
   FUNC_Y_SPACING: 0.5
 )
 
@@ -104,14 +104,14 @@
         bus-in-inv(lyt.BUS_X, current-y, v.label, current-num, current-num + 1, basis: bus-inv-type)
       }
       current-num += 2
-      current-y -= 2.5
+      current-y -= 3.5
     } else {
       bus-signals.insert(v.id, current-num)
       if draw-inputs {
         bus-in(lyt.BUS_X, current-y, v.label, current-num)
       }
       current-num += 1
-      current-y -= 1.0
+      current-y -= 1.
     }
   }
 
@@ -164,9 +164,9 @@
         let mid-name = "f" + str(f-idx) + "_mid_" + str(t-idx)
         let inps = if basis-cfg.mid.at("tied", default: false) { 2 } else { 1 }
 
-        let h-l1 = calc.max(1.5, (term.len() - 1) * lyt.PIN_STEP + 0.8)
-        let h-mid = calc.max(1.5, (inps - 1) * lyt.PIN_STEP + 0.8)
-        let mid-y = current-y - h-l1 / 2 + h-mid / 2
+        let h-l1 = calc.max(2, (term.len() - 1) * lyt.PIN_STEP + 1)
+        let h-mid = calc.max(2, (inps - 1) * lyt.PIN_STEP + 1)
+        let mid-y = current-y - (h-l1 - h-mid) / 2
 
         logic-gate(
           mid-name, basis-cfg.mid.sym,
@@ -191,7 +191,7 @@
         l1-outputs.push(gate-name + ".out")
       }
 
-      current-y -= term.len() * lyt.PIN_STEP + 1
+      current-y -= calc.max(2, (term.len() - 1) * lyt.PIN_STEP + 1) + lyt.GATE_Y_SPACING
     }
 
     let center-y = (l1-y-coords.first() + l1-y-coords.last()) / 2
@@ -224,13 +224,13 @@
       final-out = gate-name + ".out"
 
       // Идеально точный расчет Y выхода 2-го слоя
-      let h-l2 = calc.max(1.5, (l1-outputs.len() - 1) * lyt.PIN_STEP + 0.8)
+      let h-l2 = calc.max(2, (l1-outputs.len() - 1) * lyt.PIN_STEP + 1)
       actual-out-y = center-y - h-l2 / 2
 
     } else if l1-outputs.len() == 1 {
       final-out = l1-outputs.first()
       // Идеально точный расчет Y выхода единственного элемента 1-го слоя
-      let h-l1 = calc.max(1.5, (func.terms.first().len() - 1) * lyt.PIN_STEP + 0.8)
+      let h-l1 = calc.max(2, (func.terms.first().len() - 1) * lyt.PIN_STEP + 1)
       actual-out-y = func-start-y - h-l1 / 2
     }
 
@@ -240,9 +240,9 @@
     if func-inv {
       let out-inv-name = "f" + str(f-idx) + "_out_inv"
       let inps = if basis-cfg.out-inv.tied { 2 } else { 1 }
-      let h-inv = calc.max(1.5, (inps - 1) * lyt.PIN_STEP + 0.8)
+      let h-inv = calc.max(2, (inps - 1) * lyt.PIN_STEP + 1)
 
-      let inv-x = if l1-outputs.len() > 1 { lyt.LAYER_OUT_X } else { lyt.LAYER_2_X }
+      let inv-x = if l1-outputs.len() > 1 { lyt.LAYER_OUT_X - 1 } else { lyt.LAYER_2_X - 1 }
       // Смещаем инвертор по Y так, чтобы его входы идеально совпадали с выходом L2
       let inv-y = actual-out-y + h-inv / 2
 
@@ -256,7 +256,7 @@
       if inps == 1 {
         wire(final-out, out-inv-name + ".in-1", routing: "direct")
       } else {
-        let split-x = inv-x - 0.5
+        let split-x = inv-x - 1
         wire(final-out, (split-x, actual-out-y), routing: "direct")
         circle((split-x, actual-out-y), radius: 0.05, fill: black)
         wire((split-x, actual-out-y), out-inv-name + ".in-1", routing: "|-")
@@ -305,9 +305,10 @@
   label: $S_1$,
   terms: (
     ("x1", "!y1", "!h"),
-    ("!x1", "y1", "!h"),
+    ("!x1", "y1"),
     ("!x1", "!y1", "h"),
-    ("x1", "y1", "h")
+    ("x1", "y1", "h", "x2"),
+    ("x1", "y1", "h", "x2", "x2"),
   ),
   z-fracts: (60%, 40%, 60%, 80%),
   inv-out: true // ФИНАЛЬНАЯ ИНВЕРСИЯ

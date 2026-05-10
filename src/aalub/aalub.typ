@@ -11,6 +11,6 @@
 #import "file_generators.typ": generate-tt-file-content, generate-rots-file-content
 
 #import "schemes/simple.typ": *
-#import "schemes/complex.typ": *
+#import "schemes/complex.typ" as complex-schemes
 
 #import "title-template.typ" as aalub-course-project-title
