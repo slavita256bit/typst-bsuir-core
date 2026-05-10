@@ -25,7 +25,7 @@ I used, just as example:
 ## Projects with typst-bsuir-core:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
-  * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
+    * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
   * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3) ((приколы с комплексными числами))
   * [Типовой расчёт часть 1](https://github.com/slavita256bit/toec-typical-calculations-1)
 * АИЛОЦУ
@@ -56,5 +56,8 @@ I used, just as example:
 * add licence file
 * publish package
 * maybe: remove aalub hardcode specific to my variant
+
+## If you want to use this project
+Also, there is no guarantee of compatability between versions
 
 P.S. After some time, I realized that a lot for things can be done better and there is a lot of hardcode, but I have no enough impulse to rewrite this completely 
