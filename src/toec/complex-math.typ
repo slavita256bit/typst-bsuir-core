@@ -55,3 +55,8 @@
 
   (rect: rect-str, polar: polar-str, both: $#rect-str = #polar-str #units$)
 }
+
+#let conjugate(c) = {
+  let r = to-rect(c)
+  rect(r.re, -r.im)
+}

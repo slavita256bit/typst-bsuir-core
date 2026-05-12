@@ -26,8 +26,9 @@ I used, just as example:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
     * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
-  * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3) ((приколы с комплексными числами))
+  * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3)
   * [Типовой расчёт часть 1](https://github.com/slavita256bit/toec-typical-calculations-1)
+  * Типовой расчёт часть 2 [by Slavita256bit](https://github.com/slavita256bit/toec-typical-calculations-2) (IN PROGRESS), [by Chibixar](https://github.com/chibixar/TR_part2_TOEC)
 * АИЛОЦУ
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1)
 
@@ -49,7 +50,8 @@ I used, just as example:
 ## Todo:
 * think about cross-file-link structure
 * aalub complex scheme files are obsolete a bit, remove code duplication
-* move some common things from aalub courceproject to common file
+* toec (and other) scheme inheritance (just to make less code duplication)?
+* move some common things from aalub courceproject to common file (make **our** gost constructor)
 * better project structure
 * add **just** file for easier developing (for deploy/llm file generating)
 * make separate dependencies.typ file

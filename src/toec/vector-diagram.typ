@@ -15,8 +15,15 @@
   align(center, zap.cetz.canvas({
     import zap.cetz.draw: *
 
-    // Сетка
-    grid((-1, -axes.y/2), (axes.x, axes.y/2), step: 1, stroke: luma(230) + 0.5pt)
+    // Сетка (теперь симметричная относительно оси Y)
+    grid((-axes.x, -axes.y/2), (axes.x, axes.y/2), step: 1, stroke: luma(230) + 0.5pt)
+
+    // Оси
+    line((0, -axes.y/2 - 0.5), (0, axes.y/2 + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((0, axes.y/2 + 0.5), anchor: "south-west", padding: 0.1, [$+j$])
+
+    line((-axes.x - 0.5, 0), (axes.x + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((axes.x + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
 
     // Оси
     line((0, -axes.y/2 - 0.5), (0, axes.y/2 + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
@@ -108,4 +115,6 @@
       draw-vec((0,0), volt-sum, sum-voltage.at("label", default: none), col, is-dashed: true, lbl-anchor: sum-voltage.at("anchor", default: "south-west"))
     }
   }))
+
+  v(1em)
 }
