@@ -1,5 +1,5 @@
 #import "circuits.typ": *
-#import "mathtype-mimic.typ": mathtype-mimic
+#import "mathtype-mimic.typ": *
 #import "math-helpers.typ": *
 #import "potential-diagram.typ": potential-diagram
 #import "lab1-results-table.typ": lab1-results-table

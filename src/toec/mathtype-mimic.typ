@@ -1,6 +1,19 @@
 #import "fmt.typ": *
 
-#let mathtype-mimic(receive: false, digits: 3, spacing: 0.6em, body) = {
+#let mathtype-mimic-digits = state("mathtype-mimic-digits", none)
+
+#let mathtype-mimic(receive: false, digits: none, spacing: 0.6em, body) = context {
+  // 1. Проверяем, передал ли пользователь digits вручную.
+  // 2. Если нет (none), смотрим в глобальное состояние.
+  // 3. Если и там пусто (none), берем дефолтное значение 3.
+  let final-digits = if digits != none {
+    digits
+  } else if mathtype-mimic-digits.get() != none {
+    mathtype-mimic-digits.get()
+  } else {
+    3
+  }
+
   // Set the MathType-equivalent font
   show math.equation: set text(font: "STIX Two Math", size: 14pt)
 
@@ -20,7 +33,7 @@
       let val = float(text-val)
 
       // Округляем до заданного количества знаков
-      let rounded = calc.round(val, digits: digits)
+      let rounded = calc.round(val, digits: final-digits)
 
       // Конвертируем обратно в строку с ГОСТовской запятой
       let str-val = str(rounded).replace(".", ",")
@@ -30,12 +43,12 @@
       let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
 
       // Добиваем нулями до нужного количества знаков (например, 1,5 -> 1,500)
-      if frac-part.len() < digits {
-        frac-part = frac-part + "0" * (digits - frac-part.len())
+      if frac-part.len() < final-digits {
+        frac-part = frac-part + "0" * (final-digits - frac-part.len())
       }
 
       // Собираем итоговое число
-      if digits > 0 {
+      if final-digits > 0 {
         int-part + "," + frac-part
       } else {
         int-part
