@@ -5,8 +5,8 @@
 #import "lab1-results-table.typ": lab1-results-table
 #import "figures.typ": lab-figure
 #import "table-helpers.typ": format-cells, rotate-cells
-#import "styling.typ": apply-toec-styling, unformat
-#import "vector-diagram.typ": vector-diagram
+#import "styling.typ": *
+#import "vector-diagram.typ": *
 #import "complex-math.typ" as complex-math
 
 #import "title-template.typ" as toec-template

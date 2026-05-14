@@ -20,7 +20,7 @@
 
 ## To put this project into LLM:
 I used, just as example:
-``folder2text ./src/aalub --tree -o my-lib.txt`` ([folder2text](https://github.com/chibixar/folder2text))
+``folder2text ./src/aalub --tree -o my-lib.txt`` ([folder2text by Chibixar](https://github.com/chibixar/folder2text))
 
 ## Projects with typst-bsuir-core:
 * ТЭЦ
@@ -59,7 +59,9 @@ I used, just as example:
 * publish package
 * maybe: remove aalub hardcode specific to my variant
 
-## If you want to use this project
+## If you want to use this project:
+[//]: # (todo If you want to gain money, please give me some credits &#40;and percents&#41;)
+
 Also, there is no guarantee of compatability between versions
 
-P.S. After some time, I realized that a lot for things can be done better and there is a lot of hardcode, but I have no enough impulse to rewrite this completely 
+P.S. After some time, I realized that a lot for things can be done better and there is a lot of hardcode, but currently I have no enough impulse to rewrite this completely 

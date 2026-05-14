@@ -50,7 +50,7 @@
 
   let j_signed = if p.ang < 0 { $-j$ } else { $j$ }
   let ang = calc.abs(p.ang)
-  let rect-str = $#re-part #sign_im j #im-part$
+  let rect-str = $#re-part #sign_im #im-part$ + $j$
   let polar-str = $#_fmt(p.mag, digits: p-digits) e^(#j_signed #_fmt(ang, digits: p-digits) degree)$
 
   (rect: rect-str, polar: polar-str, both: $#rect-str = #polar-str #units$)

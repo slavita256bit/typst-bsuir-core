@@ -110,8 +110,8 @@
                 let dist = if type(lbl) == dictionary and "distance" in lbl {
                     lbl.distance
                 } else {
-                    // r (радиус источника) + отступ 0.15 + учет ширины и высоты текста
-                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                    // r (радиус источника) + отступ 0.3 + учет ширины и высоты текста
+                    r + 0.3 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
                 }
 
                 cetz.draw.content(
@@ -181,8 +181,8 @@
                 let dist = if type(lbl) == dictionary and "distance" in lbl {
                     lbl.distance
                 } else {
-                    // r (радиус источника) + отступ 0.15 + учет размеров метки
-                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                    // r (радиус источника) + отступ 0.3 + учет размеров метки
+                    r + 0.3 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
                 }
 
                 cetz.draw.content(
@@ -257,8 +257,8 @@
                 let dist = if type(arrow-label) == dictionary and "distance" in arrow-label {
                     arrow-label.distance
                 } else {
-                    // Базовый отступ от линии стрелки 0.15 + размеры самой текстовой метки
-                    0.15 + calc.abs(p-dx) * (atw / 2) * 3 + calc.abs(p-dy) * (ath / 2)
+                    // Базовый отступ от линии стрелки 0.3 + размеры самой текстовой метки
+                    0.3 + calc.abs(p-dx) * (atw / 2) + calc.abs(p-dy) * (ath / 2)
                 }
 
                 // (0, y) — это геометрический центр нарисованной стрелки
@@ -526,7 +526,7 @@
         let arrow-side = phys-to-y(angle, raw-arrow-side)
         let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
         let arrow-label = named.remove("arrow-label", default: none)
-        let arrow-offset = named.remove("arrow-offset", default: 0.8)
+        let arrow-offset = named.remove("arrow-offset", default: 0.5)
 
         let draw(ctx, position, style) = {
             import zap: interface, cetz
@@ -900,3 +900,49 @@
     // Нижняя ветвь
     resistor-better("R1", "3", "4", label: (content: $R_1$, anchor: "top"), arrow-label: $dot(U)_1$, arrow-side: "bottom", arrow-dir: "forward")
   })
+
+
+  #circuit-better(scale-factor: 85%, {
+    import zap: *
+
+    // Опорные узлы (расстояние по вертикали 8 единиц для простора)
+    node-better("3", (0, 8), label: (content: "3", anchor: "left"), visible: true)
+    node-better("1", (0, 16), label: (content: "1", anchor: "top"), visible: true)
+    node-better("6", (12, 16), label: (content: "6", anchor: "top"), visible: true)
+    node-better("4", (12, 8), label: (content: "4", anchor: "top-right", distance: 0.4), visible: true)
+    node-better("2", (12, 0), label: (content: "2", anchor: "bottom"), visible: true)
+    node-better("5", (0, 0), label: (content: "5", anchor: "bottom"), visible: true)
+
+    // Ветвь 5 (3 -> 1)
+    inductor-better("L5", "3", "1", label: (content: $L_5$, anchor: "left"), arrow-label: $I_5$, arrow-side: "right", arrow-dir: "forward")
+
+    // Ветвь 6 (1 -> 6)
+    inductor-better("L6", "1", "6", label: (content: $L_6$, anchor: "top"), arrow-label: $I_6$, arrow-side: "bottom", arrow-dir: "forward")
+
+    // Ветвь 1 (6 -> 4)
+    resistor-better("R1", "6", "4", label: (content: $R_1$, anchor: "right"), arrow-label: $I_1$, arrow-side: "left", arrow-dir: "forward")
+
+    // Источник тока J1 (параллельно ветви 6->4)
+    wire("6", (17, 16))
+    jsource-better("J1", (17, 16), (17, 8), arrow-dir: "forward", label: (content: $J_1$, anchor: "right"))
+    wire((17, 8), "4")
+
+    // Ветвь 2 (4 -> 2)
+    resistor-better("R2", "4", (12, 4.2), label: (content: $R_2$, anchor: "right"), arrow-label: $I_2$, arrow-side: "left", arrow-dir: "forward")
+    inductor-better("L2", (12, 4.2), (12, 2.7), label: (content: $L_2$, anchor: "right"))
+    capacitor-better("C2", (12, 2.7), "2", label: (content: $C_2$, anchor: "right"))
+
+    // Ветвь 3 (2 -> 5)
+    resistor-better("R3", "2", (8, 0), label: (content: $R_3$, anchor: "bottom"), arrow-label: $I_3$, arrow-side: "top", arrow-dir: "forward")
+    capacitor-better("C3", (8, 0), (4, 0), label: (content: $C_3$, anchor: "bottom"))
+    source-better("E3", (4, 0), "5", label: (content: $E_3$, anchor: "bottom"), arrow-dir: "forward")
+
+    // Ветвь 4 (5 -> 3)
+    resistor-better("R4", "5", (0, 4), label: (content: $R_4$, anchor: "left"), arrow-label: $I_4$, arrow-side: "right", arrow-dir: "forward")
+    capacitor-better("C4", (0, 4), "3", label: (content: $C_4$, anchor: "left"))
+
+    // Ветвь 7 (4 -> 3)
+    inductor-better("L7", "4", (6, 8), label: (content: $L_7$, anchor: "bottom"), arrow-label: $I_7$, arrow-side: "top", arrow-dir: "forward")
+    capacitor-better("C7", (6, 8), "3", label: (content: $C_7$, anchor: "bottom"))
+  })
+

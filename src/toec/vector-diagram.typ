@@ -118,3 +118,5 @@
 
   v(1em)
 }
+
+#let scale_pt(c, scale) = (to-rect(c).re * scale, to-rect(c).im * scale)

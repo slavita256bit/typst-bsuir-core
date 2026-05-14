@@ -48,6 +48,8 @@
       cell
     }
 
+    set figure.caption(separator: [ #[--] ])
+
     show figure.caption: cap => context {
 //       set text(size: 12pt)
 //       set par(first-line-indent: 0pt)
@@ -75,3 +77,5 @@
     body
     allow-format.update(true)
 }
+
+#let im(val) = [#val$j$]
