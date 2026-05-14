@@ -51,7 +51,7 @@ I used, just as example:
 * think about cross-file-link structure
 * aalub complex scheme files are obsolete a bit, remove code duplication
 * toec (and other) scheme inheritance (just to make less code duplication)?
-* move some common things from aalub courceproject to common file (make **our** gost constructor)
+* move some common things from aalub courceproject and toec typical 2 to common file (make **our** gost constructor)
 * better project structure
 * add **just** file for easier developing (for deploy/llm file generating)
 * make separate dependencies.typ file

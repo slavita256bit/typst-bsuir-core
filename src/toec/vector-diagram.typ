@@ -10,7 +10,10 @@
   sum-voltage: none,
   sum-current: none,
   current-color: rgb("e63946"),
-  voltage-color: rgb("1d3557")
+  voltage-color: rgb("1d3557"),
+  voltage-scale: none,
+  current-scale: none,
+  scale-label-pos: "start",
 ) = {
   align(center, zap.cetz.canvas({
     import zap.cetz.draw: *
@@ -31,6 +34,47 @@
 
     line((-1.5, 0), (axes.x + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
     content((axes.x + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
+    content((-0.2, -0.2), anchor: "north-east", text(size: 9pt)[0])
+
+    // Метки масштаба на осях
+    if voltage-scale != none or current-scale != none {
+      let tick = 0.15
+      let lbl-size = 14pt
+
+      if scale-label-pos == "end" {
+        // Позиция: ПРЕДПОСЛЕДНЯЯ КЛЕТКА (с авто-вычислением)
+        let target-x = axes.x - 1
+        let target-y = (axes.y / 2) - 1
+
+        if voltage-scale != none {
+          let base-val = voltage-scale.value
+          let x-label-val = base-val * target-x
+          let y-label-val = base-val * target-y
+
+          // Засечка и текст на оси X
+          line((target-x, -tick), (target-x, tick), stroke: 1pt + black)
+          content((target-x, tick), anchor: "south", padding: 0.1, text(size: lbl-size)[#x-label-val, #voltage-scale.unit])
+
+          // Засечка и текст на оси Y
+          line((-tick, target-y), (tick, target-y), stroke: 1pt + black)
+          content((-tick, target-y), anchor: "east", padding: 0.1, text(size: lbl-size)[#y-label-val, #voltage-scale.unit])
+        }
+
+        if current-scale != none {
+          let base-val = current-scale.value
+          let x-label-val = base-val * target-x
+          let y-label-val = base-val * target-y
+
+          // Текст для тока на оси X
+          line((target-x, -tick), (target-x, tick), stroke: 1pt + black)
+          content((target-x, -tick), anchor: "north", padding: 0.1, text(size: lbl-size)[#x-label-val, #current-scale.unit])
+
+          // Текст для тока на оси Y
+          line((-tick, target-y), (tick, target-y), stroke: 1pt + black)
+          content((tick, target-y), anchor: "west", padding: 0.1, text(size: lbl-size)[#y-label-val, #current-scale.unit])
+        }
+      }
+    }
 
     // Функция отрисовки вектора
     let draw-vec(start, end, label, col, is-dashed: false, lbl-anchor: "south-west") = {
@@ -44,6 +88,7 @@
     }
 
     // --- ОТРИСОВКА ТОКОВ ---
+    // ... (остальной код остается без изменений) ...
     let curr-sum = (0.0, 0.0)
     let curr-accum = (0.0, 0.0)
     for item in currents {
@@ -109,7 +154,6 @@
       draw-vec(start, end, item.at("label", default: none), col, is-dashed: item.at("dashed", default: false), lbl-anchor: item.at("anchor", default: "south-west"))
     }
 
-    // Отрисовка суммарного напряжения (если передан и enabled не равен false)
     if sum-voltage != none and sum-voltage.at("enabled", default: true) {
       let col = sum-voltage.at("color", default: voltage-color)
       draw-vec((0,0), volt-sum, sum-voltage.at("label", default: none), col, is-dashed: true, lbl-anchor: sum-voltage.at("anchor", default: "south-west"))

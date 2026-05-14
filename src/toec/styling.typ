@@ -68,6 +68,29 @@
       }
     }
 
+    // Все ",00" -> пустота
+    show math.equation: eq => {
+      show regex(",\u{2060}?00+([^0-9]|$)"): it => {
+        if it.text.ends-with("0") { none } else { it.text.slice(-1) }
+      }
+      eq
+    }
+
+    show math.equation: it => {
+      // Находим все греческие буквы и принудительно делаем их upright
+      show regex("[\u{0370}-\u{03FF}]"): it => math.upright(it)
+      it
+    }
+
+    // Все картинки по центру страницы
+    show figure: fig => {
+      if fig.kind == table {
+        fig
+      } else {
+        move(dx: -7.5mm, fig)
+      }
+    }
+
     body
 }
 
