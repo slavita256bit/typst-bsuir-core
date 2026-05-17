@@ -1,0 +1,2094 @@
+# folder2text output
+# Source   : /home/chibixar/Documents/Arkadz/BSUIR/typst-bsuir-core/src/toec
+# Generated: 2026-05-12 12:16:47
+# Files    : 15
+
+
+## circuits.typ  (40.9 KB)
+
+```typ
+#import "@preview/zap:0.5.0" /* From 0.5.0 */
+
+// НОВОЕ: Единый конвертер названий в векторы X, Y
+#let phys-to-vec(dir) = {
+    if dir in ("top", "north", "up") { (0, 1) }
+    else if dir in ("bottom", "south", "down") { (0, -1) }
+    else if dir in ("right", "east") { (1, 0) }
+    else if dir in ("left", "west") { (-1, 0) }
+    // ДИАГОНАЛИ
+    else if dir in ("top-right", "right-top", "north-east", "up-right", "right-up") { (0.7071, 0.7071) }
+    else if dir in ("top-left", "left-top", "north-west", "up-left", "left-up") { (-0.7071, 0.7071) }
+    else if dir in ("bottom-right", "right-bottom", "south-east", "down-right", "right-down") { (0.7071, -0.7071) }
+    else if dir in ("bottom-left", "left-bottom", "south-west", "down-left", "left-down") { (-0.7071, -0.7071) }
+    else { (0, 0) } // Неизвестное направление
+}
+
+// Helper: Maps physical direction to Zap's local anchors ("north", "south-west"...)
+#let phys-to-anchor(angle, physical) = {
+    let vec = phys-to-vec(physical)
+    if vec == (0, 0) { return physical } // fallback для нестандартных якорей
+
+    let (dx, dy) = vec
+    let sin-a = calc.sin(angle)
+    let cos-a = calc.cos(angle)
+
+    let lx = dx * cos-a + dy * sin-a
+    let ly = -dx * sin-a + dy * cos-a
+
+    let threshold = 0.3
+    let is-n = ly > threshold
+    let is-s = ly < -threshold
+    let is-e = lx > threshold
+    let is-w = lx < -threshold
+
+    let res = ""
+    if is-n { res += "north" }
+    if is-s { res += "south" }
+    if res != "" and (is-e or is-w) { res += "-" }
+    if is-e { res += "east" }
+    if is-w { res += "west" }
+
+    if res == "" { "center" } else { res }
+}
+
+// Helper: Determines if physical direction corresponds to local +Y (1) or -Y (-1)
+#let phys-to-y(angle, physical) = {
+    if physical == "wire-left" { return 1 }
+    if physical == "wire-right" { return -1 }
+
+    let vec = phys-to-vec(physical)
+    let (dx, dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+    let ly = -dx * calc.sin(angle) + dy * calc.cos(angle)
+    if ly >= 0 { 1 } else { -1 }
+}
+
+// Helper: Determines if physical direction corresponds to local +X (forward) or -X (backward)
+#let phys-to-x(angle, physical) = {
+    if physical == "forward" { return 1 }
+    if physical == "backward" { return -1 }
+
+    let vec = phys-to-vec(physical)
+    let (dx, dy) = if vec != (0, 0) { vec } else { (1, 0) }
+
+    let lx = dx * calc.cos(angle) + dy * calc.sin(angle)
+    if lx >= 0 { 1 } else { -1 }
+}
+
+#let source-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let r = style.at("radius", default: 0.53)
+            interface((-r, -r), (r, r), io: position.len() < 2)
+            cetz.draw.circle((0, 0), radius: r, fill: style.fill, stroke: style.stroke)
+
+            let arrow-len = r * 0.65
+            let start-x = -arrow-dir * arrow-len
+            let end-x = arrow-dir * arrow-len
+            cetz.draw.line((start-x, 0), (end-x, 0), stroke: style.stroke, mark: (end: ">", fill: style.stroke.paint, scale: 1.2))
+
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box) // ИЗМЕРЯЕМ ТЕКСТ (width, height)
+
+                // Если пользователь задал distance - используем его. Иначе вычисляем сами!
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    // r (радиус источника) + отступ 0.15 + учет ширины и высоты текста
+                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, l-dy * dist),
+                    label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("isource", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let jsource-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let r = style.at("radius", default: 0.53)
+            interface((-r, -r), (r, r), io: position.len() < 2)
+
+            cetz.draw.circle((0, 0), radius: r, fill: style.fill, stroke: style.stroke)
+
+            let size = r * 0.35
+            let shift = r * 0.2
+            let global_arrows_shift = 0.1
+
+            let chevron(tip-x) = {
+                cetz.draw.line(
+                    (tip-x - arrow-dir * size, size),
+                    (tip-x, 0),
+                    (tip-x - arrow-dir * size, -size),
+                    stroke: style.stroke
+                )
+            }
+
+            chevron((shift + global_arrows_shift) * arrow-dir)
+            chevron((-shift + global_arrows_shift) * arrow-dir)
+
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box) // ИЗМЕРЯЕМ ТЕКСТ
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    // r (радиус источника) + отступ 0.15 + учет размеров метки
+                    r + 0.15 + calc.abs(p-dx) * (tw / 2) + calc.abs(p-dy) * (th / 2)
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, l-dy * dist),
+                    label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("isource", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let resistor-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+
+        // Извлекаем "сырое" название стороны для стрелки (чтобы использовать его как дефолтный anchor для метки тока)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
+        let arrow-label = named.remove("arrow-label", default: none)
+        let arrow-offset = named.remove("arrow-offset", default: 0.5)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.41)
+            let h = style.at("height", default: 0.47)
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+            cetz.draw.rect((-w/2, -h/2), (w/2, h/2), fill: style.fill, stroke: style.stroke)
+
+            // СТРЕЛКА ТОКА И ЕЕ МЕТКА
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 0.8
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line(
+                    (start-x, y), (end-x, y),
+                    stroke: style.stroke,
+                    mark: (end: ">", fill: style.stroke.paint)
+                )
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                // По умолчанию используем ту же сторону, с которой нарисована сама стрелка (raw-arrow-side)
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label {
+                    arrow-label.distance
+                } else {
+                    // Базовый отступ от линии стрелки 0.15 + размеры самой текстовой метки
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 3 + calc.abs(p-dy) * (ath / 2)
+                }
+
+                // (0, y) — это геометрический центр нарисованной стрелки
+                cetz.draw.content(
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
+                    anchor: "center",
+                )
+            }
+
+            // ОСНОВНАЯ МЕТКА РЕЗИСТОРА (R1, R2...)
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.5 + p-dy * calc.cos(-angle) * 1.5
+
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2)
+                    comp-dist + 0.8 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3)
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, l-dy * dist),
+                    label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let ground-better(node-name, length: 0.8, spacing: 0.2, stroke: 1pt) = {
+  import zap: cetz, wire
+  cetz.draw.get-ctx(ctx => {
+      let (ctx, pos) = cetz.coordinate.resolve(ctx, node-name)
+      let (x, y, z) = pos
+
+      wire(pos, (x, y - 0.5)) // Провод вниз от узла
+
+      let start_x = x - length / 2
+      let end_x = x + length / 2
+      let base_y = y - 0.5
+
+      cetz.draw.line((start_x, base_y), (end_x, base_y), stroke: stroke)
+      cetz.draw.line((start_x + spacing, base_y - spacing), (end_x - spacing, base_y - spacing), stroke: stroke)
+      cetz.draw.line((start_x + 2*spacing, base_y - 2*spacing), (end_x - 2*spacing, base_y - 2*spacing), stroke: stroke)
+  })
+}
+
+// Wrapper function for customized Zap circuits
+#let circuit-better(
+    scale-factor: 100%,
+    alignment: center,
+    text-font: "Times New Roman",
+    math-font: "STIX Two Math",
+    text-size: 14pt,
+    stroke-thickness: 1.2pt,
+    resistor-width: 1.6,
+    resistor-height: 0.5,
+    ..zap-args,
+    body
+) = {
+    let reversed-factor = 100% / scale-factor
+    align(alignment, block(
+        scale(scale-factor)[
+            // Apply text and math font settings
+            #set text(font: text-font, size: text-size * reversed-factor)
+            #show math.equation: set text(font: math-font, size: text-size * reversed-factor)
+
+            // Initialize the Zap circuit
+            #zap.circuit(..zap-args, {
+                // Apply default styles
+                zap.set-style(stroke: (thickness: stroke-thickness * reversed-factor))
+                zap.set-style(wire: (stroke: (thickness: stroke-thickness * reversed-factor)))
+                zap.set-style(resistor: (width: resistor-width, height: resistor-height))
+
+                // Insert the user's circuit components
+                body
+            })
+        ]
+    ))
+}
+
+#let current-arrow(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let arrow-label = named.remove("arrow-label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.2)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.0)
+
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            // ИСПРАВЛЕНИЕ 1: Даем минимальную высоту интерфейсу, чтобы работали якоря
+            interface((-w/2, -0.1), (w/2, 0.1), io: position.len() < 2)
+            cetz.draw.line((-w/2, 0), (w/2, 0), stroke: safe-stroke)
+
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 0.8
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+        }
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let open-branch-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "bottom")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.35)
+
+        let gap = named.remove("gap", default: 1.5)
+        let node-radius = named.remove("node-radius", default: 0.08)
+        let show-terminals = named.remove("show-terminals", default: false)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+
+            // ИСПРАВЛЕНИЕ 2: Ширина должна быть больше зазора, иначе провода "скрещиваются"
+            let default-w = style.at("width", default: 1.41)
+            let w = calc.max(default-w, gap + 0.4)
+            let h = style.at("height", default: 0.47)
+            let half-gap = gap / 2
+
+            // Безопасное извлечение цвета
+            let stroke-paint = black
+            if type(style.stroke) == dictionary and "paint" in style.stroke {
+                stroke-paint = style.stroke.paint
+            }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            cetz.draw.line((-w/2, 0), (-half-gap, 0), stroke: style.stroke)
+            cetz.draw.line((half-gap, 0), (w/2, 0), stroke: style.stroke)
+
+            cetz.draw.circle((-half-gap, 0), radius: node-radius, fill: stroke-paint, stroke: none)
+            cetz.draw.circle((half-gap, 0), radius: node-radius, fill: stroke-paint, stroke: none)
+
+            if show-terminals {
+                let t-size = 0.2
+                cetz.draw.line((-half-gap - t-size, -t-size), (-half-gap + t-size, t-size), stroke: style.stroke)
+                cetz.draw.line((half-gap - t-size, -t-size), (half-gap + t-size, t-size), stroke: style.stroke)
+            }
+
+            if lbl != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = gap * 0.9
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line(
+                    (start-x, y), (end-x, y),
+                    stroke: style.stroke,
+                    mark: (end: ">", fill: stroke-paint)
+                )
+
+                let arr-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let arr-anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let inductor-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
+        let arrow-label = named.remove("arrow-label", default: none)
+        let arrow-offset = named.remove("arrow-offset", default: 0.8)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.41)
+            let h = style.at("height", default: 0.47)
+
+            // БРОНЕБОЙНАЯ ПРОВЕРКА СТИЛЕЙ
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // ГОСТ КАТУШКА (4 полуокружности)
+            let loops = 4
+            let step = w / loops
+            for i in range(loops) {
+                let cx = -w/2 + step/2 + i * step - 0.17
+                cetz.draw.arc((cx, -0.02), start: 180deg, stop: 0deg, radius: (step/2, h/2), stroke: safe-stroke)
+            }
+
+            // СТРЕЛКА НАПРЯЖЕНИЯ
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 0.8
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.12 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+
+            // ПОДПИСЬ ЭЛЕМЕНТА
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
+                let dist = if type(lbl) == dictionary and "distance" in lbl { lbl.distance } else { let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2); comp-dist + 0.8 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3) }
+
+                cetz.draw.content((l-dx * dist, l-dy * dist), label-box, anchor: "center")
+            }
+        }
+        // Используем базовый стиль "inductor", чтобы zap не падал
+        component("inductor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let capacitor-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "top")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "right"))
+        let arrow-label = named.remove("arrow-label", default: none)
+        let arrow-offset = named.remove("arrow-offset", default: 0.8)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 0.6)
+            let h = style.at("height", default: 0.8)
+
+            let safe-stroke = style.at("stroke", default: 1pt + black)
+            let stroke-paint = black
+            if type(safe-stroke) == dictionary { stroke-paint = safe-stroke.at("paint", default: black) }
+            else if type(safe-stroke) == stroke { stroke-paint = safe-stroke.paint }
+            else if type(safe-stroke) == color { stroke-paint = safe-stroke }
+
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // ГОСТ КОНДЕНСАТОР
+            let gap = 0.2
+            cetz.draw.line((-w/2, 0), (-gap/2, 0), stroke: safe-stroke)
+            cetz.draw.line((gap/2, 0), (w/2, 0), stroke: safe-stroke)
+            cetz.draw.line((-gap/2, -h/2), (-gap/2, h/2), stroke: safe-stroke)
+            cetz.draw.line((gap/2, -h/2), (gap/2, h/2), stroke: safe-stroke)
+
+            if arrow-label != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = w * 1.5
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                cetz.draw.line((start-x, y), (end-x, y), stroke: safe-stroke, mark: (end: ">", fill: stroke-paint))
+
+                let arr-content = if type(arrow-label) == dictionary { arrow-label.content } else { arrow-label }
+                let arr-anchor-dir = if type(arrow-label) == dictionary { arrow-label.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+                let dist = if type(arrow-label) == dictionary and "distance" in arrow-label { arrow-label.distance } else { 0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5 }
+                cetz.draw.content((l-dx * dist, y + l-dy * dist), arr-label-box, anchor: "center")
+            }
+
+            if lbl != none {
+                let text-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: "top") } else { "top" }
+                let vec = phys-to-vec(anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle) * 0
+                let l-dy = p-dx * calc.sin(-angle) * 1.3 + p-dy * calc.cos(-angle) * 1.3
+                let label-box = box(fill: white, inset: 1pt)[#text-content]
+                let (tw, th) = cetz.util.measure(ctx, label-box)
+                let dist = if type(lbl) == dictionary and "distance" in lbl { lbl.distance } else { let comp-dist = -calc.abs(l-dx) * (w / 2) - calc.abs(l-dy) * (h / 2); comp-dist + 1.1 + calc.abs(p-dx) * (tw / 4) + calc.abs(p-dy) * (th / 3) }
+                cetz.draw.content((l-dx * dist, l-dy * dist), label-box, anchor: "center")
+            }
+        }
+        // Используем базовый стиль "capacitor", чтобы zap не падал
+        component("capacitor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+#let node-better(name, pos, visible: false, radius: 0.12, fill: black, ..params) = {
+    import zap: cetz, node
+
+    let named = params.named()
+
+    let lbl = named.at("label", default: none)
+    if type(lbl) == dictionary and "anchor" in lbl {
+        lbl.anchor = phys-to-anchor(0deg, lbl.anchor)
+        named.label = lbl
+    }
+
+    // ИСПРАВЛЕНИЕ 3: радиус 0.001 вместо 0.0000001 (во избежание floating point precision error)
+    node(name, pos, stroke: none, fill: false, radius: 0.001, ..named)
+
+    if visible {
+        cetz.draw.circle(name, radius: radius, fill: fill, stroke: none)
+    }
+}
+
+#let open-branch-better(name, ..params) = {
+    import zap: cetz, component
+    let pos = params.pos()
+
+    cetz.draw.get-ctx(ctx => {
+        let angle = 0deg
+        if pos.len() == 2 {
+            let (ctx, rp1) = cetz.coordinate.resolve(ctx, pos.at(0))
+            let (ctx, rp2) = cetz.coordinate.resolve(ctx, pos.at(1))
+            angle = cetz.vector.angle2(rp1, rp2)
+        }
+
+        let named = params.named()
+
+        // Основные настройки метки и стрелки
+        let lbl = named.remove("label", default: none)
+        let raw-arrow-side = named.remove("arrow-side", default: "bottom")
+        let arrow-side = phys-to-y(angle, raw-arrow-side)
+
+        let arrow-dir = phys-to-x(angle, named.remove("arrow-dir", default: "forward"))
+        let arrow-offset = named.remove("arrow-offset", default: 0.35) // Отступ стрелки от центра
+
+        // Настройки геометрии разрыва
+        let gap = named.remove("gap", default: 1.5) // Размер пустого пространства
+        let node-radius = named.remove("node-radius", default: 0.08)
+        let show-terminals = named.remove("show-terminals", default: false) // Косые черточки (как на рис 2)
+
+        let draw(ctx, position, style) = {
+            import zap: interface, cetz
+            let w = style.at("width", default: 1.41)
+            let h = style.at("height", default: 0.47)
+            let half-gap = gap / 2
+
+            // Теперь интерфейс — это полноценный прямоугольник, а не линия
+            interface((-w/2, -h/2), (w/2, h/2), io: position.len() < 2)
+
+            // 1. Рисуем провода до разрыва
+            cetz.draw.line((-w/2, 0), (-half-gap, 0), stroke: style.stroke)
+            cetz.draw.line((half-gap, 0), (w/2, 0), stroke: style.stroke)
+
+            // 2. Рисуем узлы (точки)
+            cetz.draw.circle((-half-gap, 0), radius: node-radius, fill: style.stroke.paint, stroke: none)
+            cetz.draw.circle((half-gap, 0), radius: node-radius, fill: style.stroke.paint, stroke: none)
+
+            // 3. Опционально: Рисуем косые черточки (клеммы, как на 2-м скриншоте)
+            if show-terminals {
+                let t-size = 0.2
+                // Левая клемма (под углом 45 градусов)
+                cetz.draw.line((-half-gap - t-size, -t-size), (-half-gap + t-size, t-size), stroke: style.stroke)
+                // Правая клемма
+                cetz.draw.line((half-gap - t-size, -t-size), (half-gap + t-size, t-size), stroke: style.stroke)
+            }
+
+            // 4. Рисуем стрелку напряжения и подпись
+            if lbl != none {
+                let y = arrow-side * arrow-offset
+                let arrow-len = gap * 0.9 // Длина стрелки чуть меньше зазора
+                let start-x = -arrow-dir * (arrow-len / 2)
+                let end-x = arrow-dir * (arrow-len / 2)
+
+                // Сама стрелка
+                cetz.draw.line(
+                    (start-x, y), (end-x, y),
+                    stroke: style.stroke,
+                    mark: (end: ">", fill: style.stroke.paint)
+                )
+
+                // Логика позиционирования текста (идентична резистору)
+                let arr-content = if type(lbl) == dictionary { lbl.content } else { lbl }
+                let arr-anchor-dir = if type(lbl) == dictionary { lbl.at("anchor", default: raw-arrow-side) } else { raw-arrow-side }
+
+                let vec = phys-to-vec(arr-anchor-dir)
+                let (p-dx, p-dy) = if vec != (0, 0) { vec } else { (0, 1) }
+
+                let l-dx = p-dx * calc.cos(-angle) * 0 - p-dy * calc.sin(-angle)
+                let l-dy = p-dx * calc.sin(-angle) + p-dy * calc.cos(-angle)
+
+                let arr-label-box = box(fill: white, inset: 1pt)[#arr-content]
+                let (atw, ath) = cetz.util.measure(ctx, arr-label-box)
+
+                let dist = if type(lbl) == dictionary and "distance" in lbl {
+                    lbl.distance
+                } else {
+                    0.15 + calc.abs(p-dx) * (atw / 2) * 1.5 + calc.abs(p-dy) * (ath / 2) * 1.5
+                }
+
+                cetz.draw.content(
+                    (l-dx * dist, y + l-dy * dist),
+                    arr-label-box,
+                    anchor: "center",
+                )
+            }
+        }
+
+        component("resistor", name, ..pos, draw: draw, ..named)
+    })
+}
+
+// EXAMPLE
+#circuit-better(scale-factor: 80%, {
+    import zap: *
+
+//     set-style(stroke: (thickness: 1.2pt))
+//     set-style(wire: (stroke: (thickness: 1.2pt)))
+//     set-style(resistor: (width: 1.6, height: 0.5))
+
+    node-better("e", (0, 3.5), label: (content: "e", anchor: "west"), visible: true)
+    node-better("a", (5, 7), label: (content: "a", anchor: "north"), visible: true)
+    node-better("б", (11, 7), label: (content: "б", anchor: "north"), visible: true)
+    node-better("в", (16, 3.5), label: (content: "в", anchor: "east"), visible: true)
+    node-better("д", (5, 0), label: (content: "д", anchor: "south"), visible: true)
+    node-better("г", (11, 0), label: (content: "г", anchor: "south"), visible: true)
+
+    // Notice how intuitive this becomes: you just ask for the physical "left", "right", "top", "bottom"
+    // Left Branch (UP):
+    wire("д", (0,0))
+    source-better("E1", (0,0), "e", arrow-dir: "up", label: (content: $E_1$, anchor: "left"))
+    resistor-better("R1", "e", (0,7), label: (content: $R_1$, anchor: "right"), arrow-label: $I_1$, arrow-side: "left", arrow-dir: "up")
+    wire((0,7), "a")
+
+    // Top Branch (RIGHT):
+    resistor-better("R2", "a", "б", label: (content: $R_2$, anchor: "top"), arrow-label: $I_2$, arrow-side: "bottom", arrow-dir: "right")
+
+    // Middle Branches (DOWN):
+    resistor-better("R5", "a", "д", label: (content: $R_5$, anchor: "left"), arrow-label: $I_5$, arrow-side: "right", arrow-dir: "down")
+    resistor-better("R4", "б", "г", label: (content: $R_4$, anchor: "right"), arrow-label: $I_4$, arrow-side: "left", arrow-dir: "down")
+
+    // Right Branch (UP):
+    wire("г", (16,0))
+    source-better("E3", (16,0), "в", arrow-dir: "up", label: (content: $E_3$, anchor: "right"))
+    resistor-better("R3", "в", (16,7), label: (content: $R_3$, anchor: "left"), arrow-label: $I_3$, arrow-side: "right", arrow-dir: "up")
+    wire((16,7), "б")
+
+    // Bottom Branch (LEFT, from г to д):
+    resistor-better("R6", "г", "д", label: (content: $R_6$, anchor: "bottom"), arrow-label: $I_6$, arrow-side: "top", arrow-dir: "left")
+})
+
+
+#circuit-better(scale-factor: 80%, {
+    import zap: *
+
+    node-better("1", (0, -1), label: (content: "1", anchor: "west"), visible: true)
+    node-better("3", (16, -1), label: (content: "3", anchor: "east"), visible: true)
+    node-better("2", (8, 9), label: (content: "2", anchor: "north"), visible: true)
+    node-better("4", (8, 3), label: (content: "4", anchor: "north-west"), visible: true)
+
+    node-better("5", (4, 1), label: (content: "5", anchor: "north-west"), visible: true)
+    node-better("6", (12, 1), label: (content: "6", anchor: "north-east"), visible: true)
+
+    // Внешний контур
+    resistor-better("R1", "1", "2", label: (content: $R_1$, anchor: "right"), arrow-label: $I_1$, arrow-side: "left", arrow-dir: "forward")
+    resistor-better("R5", "2", "3", label: (content: $R_5$, anchor: "left"), arrow-label: $I_5$, arrow-side: "right", arrow-dir: "forward")
+    resistor-better("R3", "1", "3", label: (content: $R_3$, anchor: "bottom"), arrow-label: $I_3$, arrow-side: "top", arrow-dir: "forward")
+
+    // Внутренняя звезда
+    resistor-better("R6", "2", "4", label: (content: $R_6$, anchor: "right"), arrow-label: $I_6$, arrow-side: "left", arrow-dir: "forward")
+
+    // Ветвь 4-1 (с E2)
+    resistor-better("R2", "4", "5", position: 50%, label: (content: $R_2$, anchor: "top"), arrow-label: $I_2$, arrow-side: "right", arrow-dir: "forward")
+    source-better("E2", "5", "1", position: 30%, arrow-dir: "forward", label: (content: $E_2$, anchor: "bottom"))
+
+    // Ветвь 4-3 (с E4)
+    resistor-better("R4", "4", "6", label: (content: $R_4$, anchor: "top"), arrow-label: $I_4$, arrow-side: "left", arrow-dir: "forward")
+    source-better("E4", "6", "3", position: 30%, arrow-dir: "forward", label: (content: $E_4$, anchor: "bottom"))
+
+    ground-better("3")
+  })
+
+#circuit-better(scale-factor: 100%, {
+  import zap: *
+
+  // Пример 1: Обычный разрыв
+  open-branch-better("XX1", (0, 2), (3, 2), label: $U_(x x)$, arrow-side: "bottom", arrow-dir: "forward")
+
+  // Пример 2: Разрыв с клеммами
+  open-branch-better("XX2", (5, 2), (8, 2), label: $U_(x x)$, arrow-side: "bottom", arrow-dir: "forward", show-terminals: true)
+
+  // Пример вертикального разрыва
+  open-branch-better("XX3", (1, -2), (1, 0), label: $U_(x x)$, arrow-side: "right", arrow-dir: "up")
+})
+
+#circuit-better(scale-factor: 80%, {
+    import zap: *
+
+    // Опорные узлы
+    node-better("1", (0, 8), label: (content: "1", anchor: "top"), visible: true)
+    node-better("TR", (6, 8), visible: false)
+    node-better("nL", (6, 5.5), visible: false)
+    node-better("2", (6, 3), label: (content: "2", anchor: "left"), visible: true)
+    node-better("3", (6, 0), label: (content: "3", anchor: "bottom"), visible: true)
+    node-better("4", (0, 0), label: (content: "4", anchor: "bottom"), visible: true)
+
+    // Входное напряжение
+    open-branch-better("U_in", "4", "1", label: $dot(U)$, arrow-side: "left", arrow-dir: "up")
+
+    // Верхний провод
+    wire("1", (2, 8))
+    current-arrow("I_arrow", (2, 8), (4, 8), arrow-label: $dot(I)$, arrow-side: "top", arrow-dir: "forward")
+    wire((4, 8), "TR")
+
+    // Правая ветвь: Катушка и Конденсатор
+    inductor-better("L", "TR", "nL", label: (content: $L$, anchor: "west"), arrow-label: $dot(U)_k$, arrow-side: "right", arrow-dir: "forward")
+    resistor-better("rk", "nL", "2", label: (content: $r_k$, anchor: "west"))
+    capacitor-better("C", "2", "3", label: (content: $C$, anchor: "west"), arrow-label: $dot(U)_C$, arrow-side: "right", arrow-dir: "forward")
+
+    // Нижняя ветвь
+    resistor-better("R1", "3", "4", label: (content: $R_1$, anchor: "top"), arrow-label: $dot(U)_1$, arrow-side: "bottom", arrow-dir: "forward")
+  })
+```
+
+
+## complex-math.typ  (1.5 KB)
+
+```typ
+#import "fmt.typ": *
+
+#let rect(re, im) = (re: re, im: im)
+#let polar(mag, ang) = (mag: mag, ang: ang) // ang в градусах
+
+#let to-polar(c) = {
+  if "mag" in c { return c }
+  (
+    mag: calc.sqrt(calc.pow(c.re, 2) + calc.pow(c.im, 2)),
+    ang: calc.atan2(c.re, c.im).deg()
+  )
+}
+
+#let to-rect(c) = {
+  if "re" in c { return c }
+  let ang-deg = c.ang * 1deg // <--- ИСПРАВЛЕНИЕ ЗДЕСЬ
+  (
+    re: c.mag * calc.cos(ang-deg),
+    im: c.mag * calc.sin(ang-deg)
+  )
+}
+
+#let add(c1, c2) = {
+  let r1 = to-rect(c1); let r2 = to-rect(c2)
+  rect(r1.re + r2.re, r1.im + r2.im)
+}
+
+#let sub(c1, c2) = {
+  let r1 = to-rect(c1); let r2 = to-rect(c2)
+  rect(r1.re - r2.re, r1.im - r2.im)
+}
+
+#let mul(c1, c2) = {
+  let p1 = to-polar(c1); let p2 = to-polar(c2)
+  polar(p1.mag * p2.mag, p1.ang + p2.ang)
+}
+
+#let div(c1, c2) = {
+  let p1 = to-polar(c1); let p2 = to-polar(c2)
+  polar(p1.mag / p2.mag, p1.ang - p2.ang)
+}
+
+// Умное отображение комплексного числа
+#let display-complex(c, p-digits: 2, r-digits: 2, units: "") = {
+  let p = to-polar(c)
+  let r = to-rect(c)
+  let re-part = _fmt(r.re, digits: r-digits)
+  let im-part = _fmt(calc.abs(r.im), digits: r-digits)
+  let sign_im = if r.im < 0 { $-$ } else { $+$ }
+
+  let j_signed = if p.ang < 0 { $-j$ } else { $j$ }
+  let ang = calc.abs(p.ang)
+  let rect-str = $#re-part #sign_im j #im-part$
+  let polar-str = $#_fmt(p.mag, digits: p-digits) e^(#j_signed #_fmt(ang, digits: p-digits) degree)$
+
+  (rect: rect-str, polar: polar-str, both: $#rect-str = #polar-str #units$)
+}
+```
+
+
+## figures.typ  (624.0 B)
+
+```typ
+#let lab-figure(
+  body,
+  caption: none,
+  above: 0em,
+  ..args // собираем остальные аргументы
+) = {
+  let final-caption = if caption != none {
+    caption
+  } else {
+    // Если caption не задан, используем трюк для пустого caption
+    figure.caption(separator: none, [])
+  }
+
+  // Оборачиваем всё в блок или выносим отступ в параметры figure
+  figure(
+    {
+      v(above) // теперь отступ часть "тела" фигуры
+      move(dx: 0cm, body)
+    },
+    caption: final-caption,
+    ..args
+  )
+}
+```
+
+
+## fmt.typ  (1.3 KB)
+
+```typ
+// Умное форматирование чисел с нужным количеством знаков
+#let _fmt(val, digits: 2) = {
+  // Если это массив чисел, применяем форматирование ко всем элементам
+  if type(val) == array {
+    return val.map(v => _fmt(v, digits: digits))
+  }
+
+  // Безопасное превращение строк (даже с запятыми) в числа
+  let num = val
+  if type(val) == str {
+    let clean = val.replace(",", ".")
+    if clean.match(regex("^-?\d+(\.\d+)?$")) != none {
+      num = float(clean)
+    }
+  }
+
+  // Основная логика округления и добивки нулями
+  if type(num) in (float, int) {
+    let rounded = calc.round(float(num), digits: digits)
+    let str-val = str(rounded).replace(".", ",")
+    let parts = str-val.split(",")
+    let int-part = parts.at(0)
+    let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
+
+    // Добиваем недостающие нули
+    while frac-part.len() < digits {
+      frac-part += "0"
+    }
+
+    if digits > 0 { int-part + "," + sym.wj + frac-part } else { int-part }
+  } else {
+    // Если это Content (например, текст или сложное выражение), оставляем как есть
+    val
+  }
+}
+```
+
+
+## lab1-results-table.typ  (1.3 KB)
+
+```typ
+#import "math-helpers.typ": _fmt
+
+#let lab1-results-table(calc-data, exp-data) = {
+  figure(
+    table(
+      columns: (auto, auto, auto, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+      align: center + horizon,
+
+      // Шапка таблицы
+      table.header(
+        table.cell(rowspan: 2)[Данные],
+        table.cell(colspan: 2)[ЭДС\ Источников],
+        table.cell(colspan: 6, align: bottom)[Токи в ветвях],
+        [$E_1$, В], [$E_3$, В],
+        [$I_1$, мА], [$I_2$, мА], [$I_3$, мА], [$I_4$, мА], [$I_5$, мА], [$I_6$, мА]
+      ),
+
+      // Расчетные данные
+      table.cell(rowspan: 3, align: center)[Расчетные],
+      ..calc-data.flatten().map(_fmt),
+
+      // Экспериментальные данные
+      table.cell(rowspan: 3, align: center)[Эксперимен-\ тальные],
+      ..exp-data.flatten().map(_fmt)
+    )
+  )
+}
+
+// EXAMPLE
+#lab1-results-table(
+  (
+    (15, 0,  3.03,  0.90,  0.60, 0.31, 4.91,  0.90),
+    (0,  30, 1.20,  3.30,  7.93, 1.22, 3.11,  4.31),
+    (15, 30, 1.83, -3.40,  7.33, 3.93, 5.23, -3.40)
+  ),
+  (
+    (15, 0,  3.05,  0.95,  0.62, 0.30, 4.95,  0.95), // Ваши экспериментальные данные
+    (0,  30, 1.22,  3.35,  7.90, 1.25, 3.15,  4.35),
+    (15, 30, 1.85, -3.45,  7.30, 3.90, 5.20, -3.45)
+  )
+)
+
+```
+
+
+## math-helpers.typ  (6.6 KB)
+
+```typ
+#import "complex-math.typ": *
+#import "mathtype-mimic.typ": mathtype-mimic
+#import "fmt.typ": *
+
+// Расчет параллельного соединения
+#let calc-par(name, r1, r2, v1, v2, res, unit: "кОм", receive: false, d-args: 2, d-res: 3) = {
+  let f1 = _fmt(v1, digits: d-args)
+  let f2 = _fmt(v2, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
+  mathtype-mimic(receive: receive, [
+    $ R_#name = (R_#r1 R_#r2) / (R_#r1 + R_#r2) = (#f1 dot #f2) / (#f1 + #f2) = #fres #unit. $
+  ])
+}
+
+// Расчет последовательного соединения
+#let calc-seq(name, rs, vs, res, unit: "кОм", receive: false, d-args: 2, d-res: 3) = {
+  let fvs = _fmt(vs, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
+  mathtype-mimic(receive: receive, [
+    $ R_#name = #rs.map(r => $R_#r$).join($+$) = #fvs.join($+$) = #fres #unit. $
+  ])
+}
+
+// Базовое деление (Закон Ома)
+#let calc-div(left, top-sym, bot-sym, top-val, bot-val, res, unit: "мА", receive: false, d-args: 2, d-res: 3) = {
+  let ftop = _fmt(top-val, digits: d-args)
+  let fbot = _fmt(bot-val, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
+  mathtype-mimic(receive: receive, [
+    $ #left = #top-sym / #bot-sym = #ftop / #fbot = #fres #unit. $
+  ])
+}
+
+// Хелпер для расчета проводимости (сумма обратных сопротивлений)
+// Принимает имя узла (напр. "11"), массив индексов сопротивлений ("1", "2") и их значения как числа
+#let calc-g(name, r-indices, r-vals, receive: false) = {
+  // Считаем математический результат
+  let res-val = r-vals.map(v => 1 / v).sum()
+
+  // Формируем символьную часть: 1/R1 + 1/R2 ...
+  let sym-part = r-indices.map(i => $1 / R_#i$).join($+$)
+
+  // Формируем часть с числами: 1/2.4 + 1/2.0 ...
+  let num-part = r-vals.map(v => $1 / #_fmt(v)$).join($+$)
+
+  mathtype-mimic(receive: receive, [
+    $ g_#name = #sym-part = #num-part = #_fmt(calc.round(res-val, digits: 3)) " См". $
+  ])
+}
+
+// Хелпер для Закона Ома ветви (с ЭДС и разностью потенциалов)
+// I = (phi_start - phi_end + E) / R
+#let calc-branch-i(i-idx, phi-s-idx, phi-e-idx, e-idx, r-idx, phi-s-val, phi-e-val, e-val, r-val, receive: false) = {
+
+  // Вычисляем результат в мА
+  let res-val = (phi-s-val - phi-e-val + e-val) / r-val
+
+  // Собираем числитель символьно
+  let num-sym = ()
+  if phi-s-idx != none { num-sym.push($phi_#phi-s-idx$) }
+  if phi-e-idx != none { num-sym.push($- phi_#phi-e-idx$) }
+  if e-idx != none {
+    if e-val > 0 { num-sym.push($+ E_#e-idx$) } else { num-sym.push($- E_#e-idx$) }
+  }
+  let sym-top = num-sym.join()
+
+  // Собираем числитель с числами
+  let num-vals = ()
+  if phi-s-idx != none { num-vals.push($#_fmt(calc.round(phi-s-val, digits: 3))$) }
+  if phi-e-idx != none { num-vals.push($- #_fmt(calc.round(phi-e-val, digits: 3))$) }
+  if e-idx != none {
+    if e-val > 0 { num-vals.push($+ #_fmt(e-val)$) } else { num-vals.push($- #_fmt(calc.abs(e-val))$) }
+  }
+  let val-top = num-vals.join()
+
+  mathtype-mimic(receive: receive, [
+    $ I_#i-idx = (#sym-top) / R_#r-idx = (#val-top) / #_fmt(r-val) = #_fmt(calc.round(res-val, digits: 3)) " мА". $
+  ])
+}
+
+
+// Правило плеч
+#let calc-shoulder(left, i-sym, r-top, r-bot, i-val, top-val, bot-val, res, unit: "мА", receive: false, d-args: 2, d-res: 3) = {
+  let fi = _fmt(i-val, digits: d-args)
+  let ftop = _fmt(top-val, digits: d-args)
+  let fbot = _fmt(bot-val, digits: d-args)
+  let fres = _fmt(res, digits: d-res)
+  mathtype-mimic(receive: receive, [
+    $ #left = #i-sym #r-top / (#r-bot) = #fi (#ftop) / (#fbot) = #fres #unit. $
+  ])
+}
+
+// --- Базовые элементы ---
+#let calc-reactance-L(f, L, symbol: "L", L-unit: "mH") = {
+  let L-val = L * 1e-3
+  let w = 2 * calc.pi * f
+  let XL = w * L-val
+
+  let display = mathtype-mimic[
+    $ X_L = omega #symbol = 2 pi f #symbol = 2 dot calc.pi dot #f dot #L dot 10^(-3) = #_fmt(XL) " Ом". $
+  ]
+  (val: XL, display: display)
+}
+
+#let calc-reactance-C(f, C, symbol: "C", C-unit: "µF") = {
+  let C-val = C * 1e-6
+  let w = 2 * calc.pi * f
+  let XC = 1 / (w * C-val)
+
+  let display = mathtype-mimic[
+    $ X_C = 1 / (omega #symbol) = 1 / (2 pi f #symbol) = 1 / (2 dot calc.pi dot #f dot #C dot 10^(-6)) = #_fmt(XC) " Ом". $
+  ]
+  (val: XC, display: display)
+}
+
+// --- Комбинации элементов ---
+#let calc-series-impedance(components, symbol: "вх") = {
+  let R_total = components.filter(c => c.type == "R").map(c => c.val).sum()
+  let XL_total = components.filter(c => c.type == "XL").map(c => c.val).sum()
+  let XC_total = components.filter(c => c.type == "XC").map(c => c.val).sum()
+  let X_total = XL_total - XC_total
+
+  let Z = rect(R_total, X_total)
+
+  let symbolic-R = components.filter(c => c.type == "R").map(c => c.symbol).join($+$)
+  let symbolic-X = $X_L - X_C$ // Упрощено для примера, можно сделать сложнее
+
+  let display = mathtype-mimic[
+    $ dot(Z)_#symbol = (#symbolic-R) + j(#symbolic-X) = #display-complex(Z).both " Ом." $
+  ]
+  (val: Z, display: display)
+}
+
+// --- Законы цепей ---
+#let calc-ohms-law(U, Z, I-symbol: "I") = {
+  let I = div(U, Z)
+  let I-mA = polar(I.mag * 1000, I.ang) // Сразу в мА для удобства
+
+  let display = mathtype-mimic[
+    $ dot(#I-symbol) = dot(U) / dot(Z) = #display-complex(U).polar / #display-complex(Z).polar = #display-complex(I-mA).polar " мА". $
+  ]
+  (val: I, val-mA: I-mA, display: display)
+}
+
+#let calc-voltage-drop(I, Z, U-symbol: "U") = {
+  let U = mul(I, Z)
+  let display = mathtype-mimic[
+    $ dot(#U-symbol) = dot(I) dot(Z) = #display-complex(I).polar dot #display-complex(Z).polar = #display-complex(U).polar " В". $
+  ]
+  (val: U, display: display)
+}
+
+#let calc-voltage-drop-explicit(I, Z, Z-sym, Z-val, U-symbol: "U") = {
+  let U_res = mul(I, Z)
+  let I-p = to-polar(I)
+  let U-p = to-polar(U_res)
+
+  let display = mathtype-mimic[
+    $ dot(#U-symbol) = dot(I) (#Z-sym) = #display-complex(I-p).polar dot (#Z-val) = #display-complex(U-p).polar " В". $
+  ]
+  return (val: U_res, display: display)
+}
+
+#let add_j(value) = {
+  return [#if value > 0 { $j$ } else { $-j$ } #_fmt(value)]
+}
+
+
+// Просто передаем сырые float-числа через точку!
+#calc-par("23456", "5", "2346", 1.5, 3.52, 1.05)
+
+// Если нужно изменить точность для конкретной формулы:
+#calc-par("23456", "5", "2346", 1.5, 3.52, 1.05, d-args: 3, d-res: 4)
+
+```
+
+
+## mathtype-mimic.typ  (4.9 KB)
+
+```typ
+#import "fmt.typ": *
+
+#let mathtype-mimic(receive: false, digits: 3, spacing: 0.6em, body) = {
+  // Set the MathType-equivalent font
+  show math.equation: set text(font: "STIX Two Math", size: 14pt)
+
+  // FIX 1: Decimal comma (removes space after comma in numbers like 1,5)
+  show math.equation: it => {
+    show ",": math.class("normal", ",")
+    it
+  }
+
+  // FIX: Автоматическое округление и форматирование дробных чисел
+  // Ищем числа с точкой или запятой
+  let num-regex = regex("\d+[\.,]\d+")
+  show math.equation: eq => {
+    show num-regex: it => {
+      // Заменяем запятую на точку для преобразования в float
+      let text-val = it.text.replace(",", ".")
+      let val = float(text-val)
+
+      // Округляем до заданного количества знаков
+      let rounded = calc.round(val, digits: digits)
+
+      // Конвертируем обратно в строку с ГОСТовской запятой
+      let str-val = str(rounded).replace(".", ",")
+      let parts = str-val.split(",")
+
+      let int-part = parts.at(0)
+      let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
+
+      // Добиваем нулями до нужного количества знаков (например, 1,5 -> 1,500)
+      if frac-part.len() < digits {
+        frac-part = frac-part + "0" * (digits - frac-part.len())
+      }
+
+      // Собираем итоговое число
+      if digits > 0 {
+        int-part + "," + frac-part
+      } else {
+        int-part
+      }
+    }
+    eq
+  }
+
+  // FIX 2: GLOBAL LOWERED SUBSCRIPTS
+  // Intercepts all subscripts (like R_5) automatically!
+  show math.attach: it => {
+    let b = it.at("b", default: none)
+
+    let fixed-base = math.italic(it.base)
+
+    // Check if there is a subscript AND it hasn't been padded yet (prevents infinite loop!)
+    if b != none and b.func() != pad {
+      // Rebuild the attachment with our modifications
+      math.attach(
+        fixed-base,
+        t: it.at("t", default: none), // preserve superscripts if they exist
+        // Adjust 'dy' to push further down, and 'bottom' pad to push the fraction line away
+        b: pad(bottom: 1em, move(dx: 0.1em, dy: 0.5em, b)),
+        tl: it.at("tl", default: none),
+        bl: it.at("bl", default: none),
+        tr: it.at("tr", default: none),
+        br: it.at("br", default: none),
+      )
+    } else {
+      it
+    }
+  }
+
+  // FIX 3: SMART FRACTION PADDING (mimics looser MathType division gaps)
+  show math.frac: it => {
+    // Проверка, чтобы не уйти в бесконечный цикл
+    if it.num.func() != pad {
+
+      // ХИТРЫЙ ТРЮК: превращаем структуру числителя/знаменателя в текст (repr)
+      // и проверяем, есть ли внутри них вложенная дробь "frac("
+      let has-nested-n = repr(it.num).contains("frac(")
+      let has-nested-d = repr(it.denom).contains("frac(")
+      // Гибкая настройка отступов:
+      // Если есть вложенная дробь -> раздвигаем сильно (0.6em)
+      // Если это простая дробь -> раздвигаем чуть-чуть (0.3em)
+      let pad-n = if has-nested-n { 0.8em } else { 0.4em }
+      let pad-d = if has-nested-d { 0.8em } else { 0.4em }
+
+      // Оборачиваем в display, чтобы размер цифр 2-го яруса был как у 1-го
+      let n = math.display(it.num)
+      let d = math.display(it.denom)
+
+      // Применяем вычисленные отступы
+      math.frac(
+        pad(bottom: pad-n, n),
+        pad(top: pad-d, d)
+      )
+    } else {
+      it
+    }
+  }
+
+
+  block(breakable: false, width: 100%, [
+    #if (receive) [Получаем]
+    #align(center, block(above: 2em, below: 2em)[
+      // 2. Make the equations INSIDE this group tightly packed
+      #show math.equation.where(block: true): set block(spacing: spacing)
+
+      #body
+    ])
+  ])
+}
+
+// EXAMPLE
+// Теперь можно указывать количество знаков вот так:
+#mathtype-mimic(digits: 3)[
+  $
+  R_23456 = (R_5 R_2346) / (R_5 + R_2346)
+          = (1.5 dot 3.52) / (1.5 + 3.52)
+          = 1.05 "кОм."
+  $
+]
+
+#hide("|")
+
+
+#hide("|")
+
+
+#hide("|")
+
+
+#let V = (
+  R1: 230, R2: 470, R3: 160, R4: 570, R5: 310, R6: 190, R7: 550,
+  E2: 500, E4: 500,
+  J4: 3, J7: 9,
+  VARIANT: 14,
+)
+#let E4_prime = V.J4 * V.R4
+#let E7_prime = V.J7 * V.R7
+#let E4_sum = V.E4 + E4_prime
+#let R_156 = V.R1 + V.R6 + V.R5
+#let R_234 = V.R2 + V.R3 + V.R4
+#let E_2404 = V.E2 + E4_sum
+#let U_14 = (-E7_prime / V.R7 - E_2404 / R_234) / (1 / R_156 + 1 / V.R7 + 1 / R_234)
+
+#mathtype-mimic[
+  $ U_14 = (-E_07/R_7 - E_2404/R_234) / (1/R_156 + 1/R_7 + 1/R_234) = (-#E7_prime/#V.R7 - #E_2404/#R_234) / (1/#R_156 + 1/#V.R7 + 1/#R_234) = #U_14 " В". $
+]
+```
+
+
+## potential-diagram.typ  (5.3 KB)
+
+```typ
+#import "@preview/cetz:0.5.2" /* From 0.5.0 */
+#import "math-helpers.typ": _fmt // Можно раскомментировать и использовать для форматирования
+
+#let potential-diagram(
+  points,
+  width: 14,
+  height: 8,
+  x-label: $R", Ом"$,
+  y-label: $phi", В"$,
+  r-label-pos: "bottom" // По умолчанию все R снизу
+) = {
+  align(center, cetz.canvas({
+    import cetz.draw: *
+    import cetz.decorations // Импортируем модуль для фигурных скобок
+
+    let xs = points.map(p => p.r)
+    let ys = points.map(p => p.phi)
+
+    let min-x = calc.min(0, ..xs)
+    let max-x = calc.max(1, ..xs)
+    let min-y = calc.min(0, ..ys)
+    let max-y = calc.max(1, ..ys)
+
+    let dx = (max-x - min-x) * 0.1
+    let dy = (max-y - min-y) * 0.15
+    let start-x = min-x - dx
+    let end-x = max-x + dx
+    let start-y = min-y - dy
+    let end-y = max-y + dy
+
+    let scale-x = width / (end-x - start-x)
+    let scale-y = height / (end-y - start-y)
+
+    let tx(x) = (x - start-x) * scale-x
+    let ty(y) = (y - start-y) * scale-y
+
+    let origin-x = tx(0)
+    let origin-y = ty(0)
+
+    // Оси
+    line((origin-x, ty(start-y)), (origin-x, ty(end-y)), mark: (end: ">"), stroke: 1pt)
+    content((origin-x, ty(end-y)), anchor: "south-east", padding: 0.2)[#y-label]
+
+    line((tx(start-x), origin-y), (tx(end-x), origin-y), mark: (end: ">"), stroke: 1pt)
+    content((tx(end-x), origin-y), anchor: "north-west", padding: 0.2)[#x-label]
+
+    // Точка 0 в начале координат
+    content((origin-x, origin-y), anchor: "north-east", padding: 0.1)[0]
+
+    // Рисуем саму линию диаграммы
+    let path-pts = points.map(p => (tx(p.r), ty(p.phi)))
+    line(..path-pts, stroke: 1.5pt + black)
+
+    // Узлы, их названия и проекции
+    for p in points {
+      let px = tx(p.r)
+      let py = ty(p.phi)
+
+      circle((px, py), radius: 0.08, fill: black)
+
+      // Правильный выбор якоря для label
+      let anchor-pos_label = p.at("anchor", default: if p.phi >= 0 { "south-east" } else { "north-east" })
+      let padding = if (p.at("anchor").contains("-")) {0.15} else {0.3}
+      if "label" in p {
+        content((px, py), anchor: anchor-pos_label, padding: padding)[#p.label]
+      }
+
+      // Проекции на оси
+      if calc.abs(p.phi) > 0.01 {
+        // Проекция на ось X
+        line((px, py), (px, origin-y), stroke: (dash: "dashed", thickness: 0.5pt, paint: gray))
+
+        if p.at("show-phi", default: true) {
+            // НОВОЕ: Проекция на ось Y + Подпись значения потенциала
+            line((px, py), (origin-x, py), stroke: (dash: "dashed", thickness: 0.5pt, paint: gray))
+
+            // Форматируем число (меняем точку на запятую). Если используете _fmt, можно заменить на #_fmt(p.phi)
+    //         let val = str(p.phi).replace(".", ",")
+            let val = _fmt(p.phi)
+            content((origin-x, py), anchor: "east", padding: 0.15)[#val]
+        }
+      }
+    }
+
+    // Скобочки для резисторов и подписи ЭДС
+    for i in range(points.len() - 1) {
+    let p1 = points.at(i)
+    let p2 = points.at(i+1)
+
+    if calc.abs(p2.r - p1.r) > 0.001 {
+       let x1 = tx(p1.r)
+       let x2 = tx(p2.r)
+
+       // ОПРЕДЕЛЯЕМ ПОЗИЦИЮ (смотрим в точку p2 или берем общую для функции)
+       let pos = p2.at("r-pos", default: r-label-pos)
+
+       let y-brace = 0
+       let y-text = 0
+       let brace-flip = true
+       let text-anchor = "north"
+
+       if pos == "top" {
+         y-brace = ty(max-y) + 0.3 // Чуть выше верхнего края графика
+         y-text = y-brace + 0.4
+         brace-flip = false
+         text-anchor = "south"
+       } else {
+         y-brace = origin-y - 0.15 // Под осью X
+         y-text = y-brace - 0.4
+         brace-flip = true
+         text-anchor = "north"
+       }
+
+       // Рисуем фигурную скобку
+       decorations.brace((x1, y-brace), (x2, y-brace), flip: brace-flip, amplitude: 0.25, stroke: 0.8pt)
+
+       if "r-label" in p2 {
+         content(((x1+x2)/2, y-text), anchor: text-anchor, padding: 0.1)[#p2.r-label]
+       }
+
+       // Если есть вертикальный скачок - подписываем ЭДС сбоку
+      if calc.abs(p2.phi - p1.phi) > 0.001 and calc.abs(p2.r - p1.r) < 0.001 {
+         let mid-y = ty((p1.phi + p2.phi) / 2)
+         let px = tx(p1.r)
+         if "e-label" in p2 {
+           let align = if p1.r < (start-x + end-x) / 2 { "east" } else { "west" }
+           content((px, mid-y), anchor: align, padding: 0.2)[#p2.e-label]
+         }
+      }
+    }}
+  }))
+}
+
+#figure(
+  potential-diagram((
+    (r: 0,   phi: 0,     label: [г], anchor: "south-east"),
+    (r: 1.0, phi: 3.40,  label: [д], anchor: "south-east", r-label: $R_6$),
+    (r: 1.0, phi: 18.40, label: [e], anchor: "south", e-label: move(dy: 1.3em, $E_1$)),
+    (r: 4.9, phi: 11.26123123123, label: [a], anchor: "south", r-label: $R_1$),
+    (r: 6.1, phi: 15.34, label: [б], anchor: "south", r-label: $R_2$, show-phi: false),
+    (r: 8.1, phi: 30.00, label: [в], anchor: "south", r-label: $R_3$),
+    (r: 8.1, phi: 0,     anchor: "south-west", e-label: $E_3$),
+  ))
+)
+```
+
+
+## styling.typ  (2.2 KB)
+
+```typ
+#let apply-toec-styling(body) = {
+    set math.equation(numbering: none)
+    set heading(numbering: "1.1.")
+
+    show figure.where(kind: table): set figure(gap: 0.3em)
+
+    // --- SMART NUMBER FORMATTER ---
+    let format-value(it) = context {
+      let allow-format = state("allow-format", true)
+      if allow-format.get() {
+          // 1. Convert comma to dot for Typst math
+          let text = it.text.replace(",", ".")
+          let val = float(text)
+
+          // 2. Round to exactly 2 decimal places
+          let rounded = calc.round(val, digits: 2)
+
+          // 3. Convert back to string and replace dot with GOST comma
+          let str-val = str(rounded).replace(".", ",")
+
+          // 4. Add padding zeros if necessary
+          let parts = str-val.split(",")
+          if parts.len() == 1 {
+            str-val + ",00"
+          } else if parts.at(1).len() == 1 {
+            str-val + "0"
+          } else {
+            str-val
+          }
+      } else {
+        it
+      }
+    }
+
+    // Ищет числа, где есть точка или запятая и хотя бы 1 цифра после нее
+    // Это защищает индексы (I_1) от превращения в I_1,00
+    let num-regex = regex("[0-9]+[\.,][0-9]+")
+
+    // Применяем авто-форматирование к формулам
+//     show math.equation: eq => {
+//       show num-regex: format-value
+//       eq
+//     }
+
+    // Применяем авто-форматирование к таблицам
+    show table.cell: cell => {
+      show num-regex: format-value
+      cell
+    }
+
+    show figure.caption: cap => context {
+//       set text(size: 12pt)
+//       set par(first-line-indent: 0pt)
+
+      let num = none
+      if cap.numbering != none {
+        num = cap.counter.display(cap.numbering)
+      }
+
+      let content = [#cap.supplement #num#cap.separator#cap.body]
+
+      if cap.kind == table {
+        block(align(left)[#content])
+      } else {
+        block(width: 100%, align(center)[#content])
+      }
+    }
+
+    body
+}
+
+#let unformat(body) = {
+    let allow-format = state("allow-format", true)
+    allow-format.update(false)
+    body
+    allow-format.update(true)
+}
+```
+
+
+## table-helpers.typ  (1.2 KB)
+
+```typ
+// Базовая логика для ОДНОЙ ячейки
+#let _format-cell(val, dec: 2, size: 10pt) = {
+  if type(val) in (float, int) {
+    let rounded = calc.round(float(val), digits: dec)
+    let str-val = str(rounded)
+    let parts = str-val.split(".")
+
+    let int-part = parts.at(0)
+    let frac-part = if parts.len() > 1 { parts.at(1) } else { "" }
+
+    while frac-part.len() < dec { frac-part += "0" }
+
+    let final-str = if dec > 0 {
+      int-part + "," + sym.wj + frac-part
+    } else { int-part }
+
+    text(size: size)[#final-str]
+  } else {
+    // Если это текст/формула, просто применяем размер
+    text(size: size)[#val]
+  }
+}
+
+// Форматирует любое количество значений разом.
+// Использование: ..format-cells(1, 2, 3, dec: 2) или ..format-cells(my_array)
+#let format-cells(..values, dec: 2, size: 12pt) = {
+  values.pos().flatten().map(v => _format-cell(v, dec: dec, size: size))
+}
+
+// Поворачивает на 90 градусов любое количество элементов
+// Использование: ..rotate-cells([A], [B], [C])
+#let rotate-cells(..values) = {
+  values.pos().flatten().map(v => rotate(-90deg, reflow: true)[#v])
+}
+```
+
+
+## title-template.typ  (2.8 KB)
+
+```typ
+#import "@preview/modern-g7-32:0.2.0": custom-title-template
+#import custom-title-template: *
+
+// The `arguments` function defines what parameters our template accepts
+// and processes them using `fetch-field` for flexibility.
+#let arguments(..args) = {
+  let args = args.named()
+
+  // Define and fetch all the fields we need for the title page.
+  // The "*" marks a field as required.
+  args.ministry = fetch-field(
+    args.at("ministry", default: "Министерство образования Республики Беларусь"),
+    ("value*",),
+  ).value
+
+  args.organization = fetch-field(
+    args.at("organization", default: none),
+    ("type*", "name*"),
+    default: (
+      type: "Учреждение образования",
+      name: "«Белорусский государственный университет информатики и радиоэлектроники»",
+    ),
+    hint: "организации",
+  )
+
+  args.department = fetch-field(
+    args.at("department", default: none),
+    ("value*",),
+    hint: "кафедры",
+  ).value
+
+  args.work = fetch-field(
+    args.at("work", default: none),
+    ("type*", "number*", "subject*", "variant*"),
+    hint: "лабораторной работы",
+  )
+
+  args.manager = fetch-field(
+    args.at("manager", default: none),
+    ("name*",),
+    hint: "руководителя",
+  )
+
+  args.performer = fetch-field(
+    args.at("performer", default: none),
+    ("name*", "group*"),
+    hint: "исполнителя",
+  )
+
+  args.footer = fetch-field(
+    args.at("footer", default: none),
+    ("city*", "year*"),
+    hint: "подвала",
+  )
+
+  return args
+}
+
+// The `template` function receives the processed arguments and lays out the page.
+#let template(
+  ministry: none,
+  organization: (:),
+  department: none,
+  work: (:),
+  manager: none,
+  performer: none,
+  city: none,
+  year: none,
+  footer: none,
+) = {
+  // Use `per-line` for centered text blocks with vertical spacing.
+  per-line(
+    align: center,
+    indent: 0.5em,
+    ministry,
+  )
+
+  per-line(
+    align: center,
+    indent: 0.5em,
+    organization.type,
+    organization.name,
+  )
+
+  per-line(
+    align: center,
+    indent: 2fr,
+    department,
+  )
+
+  per-line(
+    align: center,
+    indent: 3fr,
+    [#work.type №#work.number],
+    [«#work.subject»],
+    [Вариант № #work.variant],
+  )
+
+  // The signature block is right-aligned. The grid columns are now 'auto'
+  // to ensure the spacing between labels and names is natural.
+  align(
+    right,
+    grid(
+      columns: (auto, auto),
+      column-gutter: 1em,
+      row-gutter: 0.5em,
+      [Проверил:], [#manager.name],
+      [Выполнил:], [ст. гр. #performer.group],
+      [],          [#performer.name],
+    ),
+  )
+
+  v(4fr)
+
+  place(
+    bottom + center,
+    dy: -1cm, // This moves it 1cm UP from the bottom
+    [#footer.city #footer.year]
+  )
+}
+
+```
+
+
+## toec.typ  (544.0 B)
+
+```typ
+#import "circuits.typ": *
+#import "mathtype-mimic.typ": mathtype-mimic
+#import "math-helpers.typ": *
+#import "potential-diagram.typ": potential-diagram
+#import "lab1-results-table.typ": lab1-results-table
+#import "figures.typ": lab-figure
+#import "table-helpers.typ": format-cells, rotate-cells
+#import "styling.typ": apply-toec-styling, unformat
+#import "vector-diagram.typ": vector-diagram
+#import "complex-math.typ" as complex-math
+
+#import "title-template.typ" as toec-template
+#import "typical-title-template.typ" as toec-typical-template
+
+```
+
+
+## typical-title-template.typ  (2.9 KB)
+
+```typ
+#import "@preview/modern-g7-32:0.2.0": custom-title-template
+#import custom-title-template: *
+
+// The `arguments` function defines what parameters our template accepts
+// and processes them using `fetch-field` for flexibility.
+#let arguments(..args) = {
+  let args = args.named()
+
+  // Define and fetch all the fields we need for the title page.
+  // The "*" marks a field as required.
+  args.ministry = fetch-field(
+    args.at("ministry", default: "Министерство образования Республики Беларусь"),
+    ("value*",),
+  ).value
+
+  args.organization = fetch-field(
+    args.at("organization", default: none),
+    ("type*", "name*"),
+    default: (
+      type: "Учреждение образования",
+      name: "«Белорусский государственный университет информатики и радиоэлектроники»",
+    ),
+    hint: "организации",
+  )
+
+  args.department = fetch-field(
+    args.at("department", default: none),
+    ("value*",),
+    hint: "кафедры",
+  ).value
+
+  args.work = fetch-field(
+    args.at("work", default: none),
+    ("type*", "number*", "subject*", "variant*"),
+    hint: "работы",
+  )
+
+  args.manager = fetch-field(
+    args.at("manager", default: none),
+    ("name*",),
+    hint: "руководителя",
+  )
+
+  args.performer = fetch-field(
+    args.at("performer", default: none),
+    ("name*", "group*"),
+    hint: "исполнителя",
+  )
+
+  args.footer = fetch-field(
+    args.at("footer", default: none),
+    ("city*", "year*"),
+    hint: "подвала",
+  )
+
+  return args
+}
+
+// The `template` function receives the processed arguments and lays out the page.
+#let template(
+  ministry: none,
+  organization: (:),
+  department: none,
+  work: (:),
+  manager: none,
+  performer: none,
+  city: none,
+  year: none,
+  footer: none,
+) = {
+  // Use `per-line` for centered text blocks with vertical spacing.
+  per-line(
+    align: center,
+    indent: 0.5em,
+    ministry,
+  )
+
+  per-line(
+    align: center,
+    indent: 0.5em,
+    organization.type,
+    organization.name,
+  )
+
+  per-line(
+    align: center,
+    indent: 2fr,
+    department,
+  )
+
+  per-line(
+    align: center,
+    indent: 3fr,
+    [Типовой расчет по курсу: «Теория электрических цепей»],
+    [Тема: «#work.subject»],
+    [Шифр студента № #work.variant],
+  )
+
+  // The signature block is right-aligned. The grid columns are now 'auto'
+  // to ensure the spacing between labels and names is natural.
+  align(
+    right,
+    grid(
+      columns: (auto, auto),
+      column-gutter: 1em,
+      row-gutter: 0.5em,
+      [Проверил:], [#manager.name],
+      [Выполнил:], [ст. гр. #performer.group],
+      [],          [#performer.name],
+    ),
+  )
+
+  v(4fr)
+
+  place(
+    bottom + center,
+    dy: -1cm, // This moves it 1cm UP from the bottom
+    [#footer.city #footer.year]
+  )
+}
+
+```
+
+
+## vector-diagram.typ  (4.2 KB)
+
+```typ
+#import "@preview/zap:0.5.0" /* From 0.5.0 */
+#import "complex-math.typ": to-rect
+
+#let vector-diagram(
+  currents: (),
+  voltages: (),
+  axes: (x: 6, y: 12),
+  chain-voltages: false,
+  chain-currents: false,
+  sum-voltage: none,
+  sum-current: none,
+  current-color: rgb("e63946"),
+  voltage-color: rgb("1d3557")
+) = {
+  align(center, zap.cetz.canvas({
+    import zap.cetz.draw: *
+
+    // Сетка
+    grid((-1, -axes.y/2), (axes.x, axes.y/2), step: 1, stroke: luma(230) + 0.5pt)
+
+    // Оси
+    line((0, -axes.y/2 - 0.5), (0, axes.y/2 + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((0, axes.y/2 + 0.5), anchor: "south-west", padding: 0.1, [$+j$])
+
+    line((-1.5, 0), (axes.x + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((axes.x + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
+
+    // Функция отрисовки вектора
+    let draw-vec(start, end, label, col, is-dashed: false, lbl-anchor: "south-west") = {
+      line(start, end, mark: (end: "stealth", fill: col), stroke: 1.5pt + col)
+      if is-dashed {
+        line((0,0), end, stroke: (dash: "dashed", paint: col, thickness: 0.8pt))
+      }
+      if label != none {
+        content(end, padding: 0.2, anchor: lbl-anchor, text(fill: col)[#label])
+      }
+    }
+
+    // --- ОТРИСОВКА ТОКОВ ---
+    let curr-sum = (0.0, 0.0)
+    let curr-accum = (0.0, 0.0)
+    for item in currents {
+      let start = (0.0, 0.0)
+      let end = (0.0, 0.0)
+      // Берем цвет из элемента, иначе глобальный для токов
+      let col = item.at("color", default: current-color)
+
+      if "val" in item {
+        let c-val = to-rect(item.val)
+        let scale = item.at("scale", default: 1)
+        let dx = float(c-val.re) * scale
+        let dy = float(c-val.im) * scale
+
+        start = if chain-currents { curr-accum } else { (0.0, 0.0) }
+        end = (start.at(0) + dx, start.at(1) + dy)
+
+        curr-accum = end
+        curr-sum = (curr-sum.at(0) + dx, curr-sum.at(1) + dy)
+      } else {
+        start = item.start
+        end = item.end
+        curr-accum = end
+        curr-sum = end
+      }
+
+      draw-vec(start, end, item.at("label", default: none), col, is-dashed: item.at("dashed", default: false), lbl-anchor: item.at("anchor", default: "south-west"))
+    }
+
+    // Отрисовка суммарного тока (если передан и enabled не равен false)
+    if sum-current != none and sum-current.at("enabled", default: true) {
+      let col = sum-current.at("color", default: current-color)
+      draw-vec((0,0), curr-sum, sum-current.at("label", default: none), col, is-dashed: true, lbl-anchor: sum-current.at("anchor", default: "south-west"))
+    }
+
+    // --- ОТРИСОВКА НАПРЯЖЕНИЙ ---
+    let volt-sum = (0.0, 0.0)
+    let volt-accum = (0.0, 0.0)
+    for item in voltages {
+      let start = (0.0, 0.0)
+      let end = (0.0, 0.0)
+      // Берем цвет из элемента, иначе глобальный для напряжений
+      let col = item.at("color", default: voltage-color)
+
+      if "val" in item {
+        let c-val = to-rect(item.val)
+        let scale = item.at("scale", default: 1)
+        let dx = float(c-val.re) * scale
+        let dy = float(c-val.im) * scale
+
+        start = if chain-voltages { volt-accum } else { (0.0, 0.0) }
+        end = (start.at(0) + dx, start.at(1) + dy)
+
+        volt-accum = end
+        volt-sum = (volt-sum.at(0) + dx, volt-sum.at(1) + dy)
+      } else {
+        start = item.start
+        end = item.end
+        volt-accum = end
+        volt-sum = end
+      }
+
+      draw-vec(start, end, item.at("label", default: none), col, is-dashed: item.at("dashed", default: false), lbl-anchor: item.at("anchor", default: "south-west"))
+    }
+
+    // Отрисовка суммарного напряжения (если передан и enabled не равен false)
+    if sum-voltage != none and sum-voltage.at("enabled", default: true) {
+      let col = sum-voltage.at("color", default: voltage-color)
+      draw-vec((0,0), volt-sum, sum-voltage.at("label", default: none), col, is-dashed: true, lbl-anchor: sum-voltage.at("anchor", default: "south-west"))
+    }
+  }))
+}
+```
+
+
+# End of folder2text output (14 files included, 1 skipped)
