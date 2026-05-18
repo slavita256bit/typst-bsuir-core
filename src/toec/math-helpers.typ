@@ -91,7 +91,7 @@
 }
 
 // --- Базовые элементы ---
-#let calc-reactance-L(f, L, symbol: "L", L-unit: "mH") = {
+#let calc-reactance-L(f, L, symbol: $L$, L-unit: "mH") = {
   let L-val = L * 1e-3
   let w = 2 * calc.pi * f
   let XL = w * L-val
@@ -102,13 +102,13 @@
   (val: XL, display: display)
 }
 
-#let calc-reactance-C(f, C, symbol: "C", C-unit: "µF") = {
+#let calc-reactance-C(f, C, symbol: $C$, C-unit: "µF") = {
   let C-val = C * 1e-6
   let w = 2 * calc.pi * f
   let XC = 1 / (w * C-val)
 
   let display = mathtype-mimic[
-    $ X_C = 1 / (omega #symbol) = 1 / (2 pi f #symbol) = 1 / (2 dot calc.pi dot #f dot #C dot 10^(-6)) = #_fmt(XC) " Ом". $
+    $ X_C = 1 / (omega#symbol) = 1 / (2pi""f#symbol) = 1 / (2 dot calc.pi dot #f dot #C dot 10^(-6)) = #_fmt(XC) " Ом". $
   ]
   (val: XC, display: display)
 }

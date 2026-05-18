@@ -9,31 +9,36 @@
   chain-currents: false,
   sum-voltage: none,
   sum-current: none,
-  current-color: rgb("e63946"),
-  voltage-color: rgb("1d3557"),
+  current-color: rgb("#000000"),
+  voltage-color: rgb("#000000"),
   voltage-scale: none,
   current-scale: none,
   scale-label-pos: "start",
 ) = {
+  // ДОБАВЬТЕ ЭТИ ДВЕ СТРОЧКИ СЮДА:
+  import "@preview/zap:0.5.0"
+  import "complex-math.typ": to-rect
+
   align(center, zap.cetz.canvas({
     import zap.cetz.draw: *
 
-    // Сетка (теперь симметричная относительно оси Y)
-    grid((-axes.x, -axes.y/2), (axes.x, axes.y/2), step: 1, stroke: luma(230) + 0.5pt)
+    // 1. Вычисляем границы осей.
+    let x-min = if type(axes.x) == array { axes.x.at(0) } else { -axes.x }
+    let x-max = if type(axes.x) == array { axes.x.at(1) } else { axes.x }
+    let y-min = if type(axes.y) == array { axes.y.at(0) } else { -axes.y/2 }
+    let y-max = if type(axes.y) == array { axes.y.at(1) } else { axes.y/2 }
+    // Сетка по заданным границам
+    grid((x-min, y-min), (x-max, y-max), step: 1, stroke: luma(230) + 0.5pt)
 
-    // Оси
-    line((0, -axes.y/2 - 0.5), (0, axes.y/2 + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
-    content((0, axes.y/2 + 0.5), anchor: "south-west", padding: 0.1, [$+j$])
+    // Ось Y
+    line((0, y-min - 0.5), (0, y-max + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((0, y-max + 0.5), anchor: "south-west", padding: 0.1, [$+j$])
 
-    line((-axes.x - 0.5, 0), (axes.x + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
-    content((axes.x + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
+    // Ось X
+    line((x-min - 0.5, 0), (x-max + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
+    content((x-max + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
 
-    // Оси
-    line((0, -axes.y/2 - 0.5), (0, axes.y/2 + 0.5), mark: (end: "stealth", fill: black), stroke: 1pt + black)
-    content((0, axes.y/2 + 0.5), anchor: "south-west", padding: 0.1, [$+j$])
-
-    line((-1.5, 0), (axes.x + 0.5, 0), mark: (end: "stealth", fill: black), stroke: 1pt + black)
-    content((axes.x + 0.5, 0), anchor: "north-west", padding: 0.1, [$+1$])
+    // Ноль в начале координат
     content((-0.2, -0.2), anchor: "north-east", text(size: 9pt)[0])
 
     // Метки масштаба на осях
@@ -42,9 +47,9 @@
       let lbl-size = 14pt
 
       if scale-label-pos == "end" {
-        // Позиция: ПРЕДПОСЛЕДНЯЯ КЛЕТКА (с авто-вычислением)
-        let target-x = axes.x - 1
-        let target-y = (axes.y / 2) - 1
+        // Позиция: ПРЕДПОСЛЕДНЯЯ КЛЕТКА относительно максимума
+        let target-x = x-max - 1
+        let target-y = y-max - 1
 
         if voltage-scale != none {
           let base-val = voltage-scale.value
@@ -88,13 +93,11 @@
     }
 
     // --- ОТРИСОВКА ТОКОВ ---
-    // ... (остальной код остается без изменений) ...
     let curr-sum = (0.0, 0.0)
     let curr-accum = (0.0, 0.0)
     for item in currents {
       let start = (0.0, 0.0)
       let end = (0.0, 0.0)
-      // Берем цвет из элемента, иначе глобальный для токов
       let col = item.at("color", default: current-color)
 
       if "val" in item {
@@ -118,7 +121,6 @@
       draw-vec(start, end, item.at("label", default: none), col, is-dashed: item.at("dashed", default: false), lbl-anchor: item.at("anchor", default: "south-west"))
     }
 
-    // Отрисовка суммарного тока (если передан и enabled не равен false)
     if sum-current != none and sum-current.at("enabled", default: true) {
       let col = sum-current.at("color", default: current-color)
       draw-vec((0,0), curr-sum, sum-current.at("label", default: none), col, is-dashed: true, lbl-anchor: sum-current.at("anchor", default: "south-west"))
@@ -130,7 +132,6 @@
     for item in voltages {
       let start = (0.0, 0.0)
       let end = (0.0, 0.0)
-      // Берем цвет из элемента, иначе глобальный для напряжений
       let col = item.at("color", default: voltage-color)
 
       if "val" in item {

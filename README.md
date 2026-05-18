@@ -16,7 +16,7 @@
 * install [utpm 3.0.0](https://github.com/typst-community/utpm) (you have to build it yourself)
 * ``utpm prj bump x.x.x`` (if you have changed the code and want a new version)
 * ``utpm prj link``
-* now use can use it with ``#import "@local/typst-bsuir-core:x.x.x": *``
+* now use can use it with ``#import "@local/typst-bsuir-coreа:x.x.x": *``
 
 ## To put this project into LLM:
 I used, just as example:
