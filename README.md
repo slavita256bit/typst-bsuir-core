@@ -31,6 +31,7 @@ I used, just as example:
   * Типовой расчёт часть 2 [by Slavita256bit](https://github.com/slavita256bit/toec-typical-calculations-2) (IN PROGRESS), [by Chibixar](https://github.com/chibixar/TR_part2_TOEC)
 * АИЛОЦУ
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1)
+//todo добавить практику
 
 ## Dependencies (and credits):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
@@ -49,6 +50,7 @@ I used, just as example:
 
 ## Todo:
 * think about cross-file-link structure
+* add eskd/espd constructor after original work finished
 * aalub complex scheme files are obsolete a bit, remove code duplication
 * toec (and other) scheme inheritance (just to make less code duplication)?
 * move some common things from aalub courceproject and toec typical 2 to common file (make **our** gost constructor)

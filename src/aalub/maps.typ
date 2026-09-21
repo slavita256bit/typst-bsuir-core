@@ -181,14 +181,15 @@
         else if side == "left" {
           let y = start * cs
           let h = span * cs
-          // Вертикальная линия рисуется через path
-          place(top + left, dx: -offset, dy: y, path((0pt, 0pt), (0pt, h), stroke: line-w))
+          // ИСПРАВЛЕНИЕ ЗДЕСЬ (path -> line)
+          place(top + left, dx: -offset, dy: y, line(start: (0pt, 0pt), end: (0pt, h), stroke: line-w))
           place(top + left, dx: -offset - 1.5em, dy: y, box(height: h, align(right + horizon)[#label]))
         }
         else if side == "right" {
           let y = start * cs
           let h = span * cs
-          place(top + left, dx: total-width + offset, dy: y, path((0pt, 0pt), (0pt, h), stroke: line-w))
+          // ИСПРАВЛЕНИЕ ЗДЕСЬ (path -> line)
+          place(top + left, dx: total-width + offset, dy: y, line(start: (0pt, 0pt), end: (0pt, h), stroke: line-w))
           place(top + left, dx: total-width + offset + 0.5em, dy: y, box(height: h, align(left + horizon)[#label]))
         }
       }

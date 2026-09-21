@@ -2,3 +2,4 @@
 #import "src/aalub/aalub.typ": *
 #import "src/toec/toec.typ": *
 #import "src/studing-practice/studing-practice.typ": *
+#import "src/report-title-template.typ" as report-title-template
