@@ -25,13 +25,16 @@ I used, just as example:
 ## Projects with typst-bsuir-core:
 * ТЭЦ
   * [Лабораторная работа №1 (Исследование цепи постоянного тока методом наложения)](https://github.com/slavita256bit/toec-lab1)
-    * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
+  * [Лабораторная работа №2 (Исследование цепи постоянного тока методом узловых потенциалов и методом эквивалентного генератора)](https://github.com/slavita256bit/toec-lab2)
   * [Лабораторная работа №3 (Исследование простых цепей синусоидального тока)](https://github.com/slavita256bit/toec-lab3)
+  * [Лабораторная работа №4 (Исследование резонанса в одиночных колебательных контурах)](https://github.com/slavita256bit/toec-lab4)
   * [Типовой расчёт часть 1](https://github.com/slavita256bit/toec-typical-calculations-1)
-  * Типовой расчёт часть 2 [by Slavita256bit](https://github.com/slavita256bit/toec-typical-calculations-2) (IN PROGRESS), [by Chibixar](https://github.com/chibixar/TR_part2_TOEC)
+  * Типовой расчёт часть 2 [by Slavita256bit](https://github.com/slavita256bit/toec-typical-calculations-2), [by Chibixar](https://github.com/chibixar/TR_part2_TOEC)
 * АИЛОЦУ
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1)
-//todo добавить практику
+* ОАИП
+  * [Учебная практика работа, КИ, 2 семестр](https://github.com/slavita256bit/studing-practice)
+  * [Курсовая работа, КИ, 3 семестр](https://github.com/slavita256bit/aalub-courseproject-1) (IN PROGRESS)
 
 ## Dependencies (and credits):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
