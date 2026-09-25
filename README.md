@@ -3,6 +3,7 @@
 ### Modules:
 * АиЛОЦУ = AaLUB (Arithmetic and Logical Units Basics) (a lot of hardcode specific to my variant)
 * ТЭЦ = ToEC (Theory of Electric Chains)
+* ПнаЯВУ = PoHLL (Programming on High Level Languages)
 
 ### Requirements:
 * Times New Roman (and **Bold**, _Italic_, etc...) installed in system ([Linux MS fonts guide](https://linuxcapable.com/install-microsoft-fonts-on-fedora-linux/))
@@ -34,9 +35,10 @@ I used, just as example:
   * [Курсовая работа, КИ, 2 семестр](https://github.com/slavita256bit/aalub-courseproject-1)
 * ОАИП
   * [Учебная практика работа, КИ, 2 семестр](https://github.com/slavita256bit/studing-practice)
-  * [Курсовая работа, КИ, 3 семестр](https://github.com/slavita256bit/aalub-courseproject-1) (IN PROGRESS)
+* ПнаЯВУ
+  * [Курсовая работа, КИ, 3 семестр](https://github.com/slavita256bit/pohll-courceproject-3sem) (IN PROGRESS)
 
-## Dependencies (and credits):
+## Dependencies (and credits <3):
 * gost: [modern-g7-32](https://github.com/typst-gost/modern-g7-32)
 * circuits: [zap](https://github.com/l0uisgrange/zap), [documentation](https://zap.grangelouis.ch/#decorations)
 * diagrams + circuits: [cetz](https://github.com/cetz-package/cetz), [documentation](https://cetz-package.github.io/docs/getting-started)
@@ -62,7 +64,7 @@ I used, just as example:
 * make separate dependencies.typ file
 * add licence file
 * publish package
-* maybe: remove aalub hardcode specific to my variant
+[//]: # (* maybe: remove aalub hardcode specific to my variant)
 
 ## If you want to use this project:
 [//]: # (todo If you want to gain money, please give me some credits &#40;and percents&#41;)
