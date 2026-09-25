@@ -54,9 +54,9 @@ I used, just as example:
 * [gost eskd/espd frames](https://github.com/typst-gost/stamp-eskd-spds/)
 
 ## Todo:
-* think about cross-file-link structure
-* add eskd/espd constructor after original work finished
-* aalub complex scheme files are obsolete a bit, remove code duplication
+* think about cross-file-link structure (for projects and for internal files) to make it feel like a framework
+* add styling constructor 
+* add eskd/espd constructor 
 * toec (and other) scheme inheritance (just to make less code duplication)?
 * move some common things from aalub courceproject and toec typical 2 to common file (make **our** gost constructor)
 * better project structure
@@ -64,6 +64,8 @@ I used, just as example:
 * make separate dependencies.typ file
 * add licence file
 * publish package
+
+[//]: # (* aalub complex scheme files are obsolete a bit, remove code duplication)
 [//]: # (* maybe: remove aalub hardcode specific to my variant)
 
 ## If you want to use this project:
