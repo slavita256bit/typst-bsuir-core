@@ -1,6 +1,6 @@
 [package]
 name = "typst-bsuir-core"
-version = "1.18.6"
+version = "1.18.8"
 entrypoint = "main.typ"
 authors = ["Slavita"]
 license = "Unlicense"
@@ -11,7 +11,7 @@ keywords = [
     "bsuir",
     "gost",
 ]
-compiler = "0.14.2"
+compiler = "0.15.0"
 exclude = [
     ".github",
     "docs",

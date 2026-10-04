@@ -32,6 +32,8 @@
     hint: "кафедры"
   ).value
 
+  args.discipline = args.at("discipline", default: none)
+
   args.work = fetch-field(
     args.at("work", default: (
       type: "ОТЧЕТ",
@@ -50,7 +52,7 @@
 
   args.manager = fetch-field(
     args.at("manager", default: (name: "Доронина А.В.")),
-    ("name*",),
+    ("name*", "verb"),
     hint: "руководителя"
   )
 
@@ -69,6 +71,7 @@
   organization: (:),
   faculty: none,
   department: none,
+  discipline: none,
   work: (:),
   student: (:),
   manager: (:),
@@ -92,6 +95,10 @@
     #if not faculty.starts-with("Факультет") [Факультет ]#faculty \
     #v(0.6em)
     #if not department.starts-with("Кафедра") [Кафедра ]#department
+    #if discipline != none [
+      #v(0.6em)
+      #discipline
+    ]
   ]
 
   v(1.5fr)
@@ -115,7 +122,8 @@
 
       #v(2.5em)
 
-      Проверил: \
+      #let verb = manager.at("verb", default: none)
+      #if verb == none [Проверил] else [#verb]: \
       #manager.name
     ])
   ])
